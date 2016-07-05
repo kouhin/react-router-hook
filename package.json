@@ -1,0 +1,59 @@
+{
+  "name": "react-router-hook",
+  "version": "0.0.1",
+  "description": "Universal data fetching and lifecycle management for react router with multiple components",
+  "main": "./lib/index.js",
+  "scripts": {
+    "build": "npm run build:lib && npm run build:umd && npm run build:umd:min",
+    "build:lib": "babel src --out-dir lib",
+    "build:umd": "webpack src/index.js dist/rrr-lazy.js --config webpack.config.development.js",
+    "build:umd:min": "webpack src/index.js dist/rrr-lazy.min.js --config webpack.config.production.js",
+    "clean": "rimraf lib dist",
+    "lint": "eslint src",
+    "prepublish": "npm run clean && npm run build",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/kouhin/rrr-lazy.git"
+  },
+  "files": [
+    "dist",
+    "lib"
+  ],
+  "keywords": [
+    "react",
+    "react-router",
+    "hook",
+    "async",
+    "fetch",
+    "react-component",
+    "reactjs"
+  ],
+  "author": [
+    "Bin Hou <houbin217jz@gmail.com> (https://twitter.com/houbin217jz)",
+  ],
+  "license": "MIT",
+  "devDependencies": {
+    "babel-cli": "^6.9.0",
+    "babel-core": "^6.9.1",
+    "babel-eslint": "^6.0.4",
+    "babel-loader": "^6.2.4",
+    "babel-preset-es2015": "^6.9.0",
+    "babel-preset-react": "^6.5.0",
+    "babel-preset-stage-0": "^6.5.0",
+    "eslint": "^2.11.1",
+    "eslint-config-airbnb": "^9.0.1",
+    "eslint-plugin-babel": "^3.2.0",
+    "eslint-plugin-import": "^1.8.1",
+    "eslint-plugin-jsx-a11y": "^1.2.3",
+    "eslint-plugin-react": "^5.1.1",
+    "estraverse-fb": "^1.3.1",
+    "react": "^15.1.0",
+    "react-dom": "^15.1.0",
+    "rimraf": "^2.5.2",
+    "webpack": "^1.13.1"
+  },
+  "dependencies": {
+  }
+}
