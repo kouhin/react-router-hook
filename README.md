@@ -6,6 +6,8 @@ Universal data fetching and lifecycle management for react router with multiple 
 [![build status](https://img.shields.io/travis/kouhin/react-router-hook.svg?style=flat-square)](https://travis-ci.org/kouhin/react-router-hook)
 [![dependency status](https://david-dm.org/kouhin/react-router-hook.svg?style=flat-square)](https://david-dm.org/kouhin/react-router-hook)
 
+**NOTICE: rrr-lazy is under heavy development and is not yet ready for production use.**
+
 ## Installation
 
 ```
