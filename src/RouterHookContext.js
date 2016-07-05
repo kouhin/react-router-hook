@@ -2,20 +2,6 @@ import React from 'react';
 import { routerHookPropName } from './routerHooks';
 import getAllComponents from './getAllComponents';
 
-function getAllComponents(components) {
-  const arr = Array.isArray(components) ? components : [components];
-  const result = [];
-  const pushComponent = (c => c && c[routerHookPropName] && result.push(c));
-  arr.forEach(component => {
-    if (typeof component === 'object') {
-      Object.keys(component).forEach(key => pushComponent(component[key]));
-    } else {
-      pushComponent(component);
-    }
-  });
-  return result;
-}
-
 export default class RouterHookContext extends React.Component {
   static propTypes = {
     children: React.PropTypes.node,

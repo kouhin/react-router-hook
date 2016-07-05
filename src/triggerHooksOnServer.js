@@ -1,6 +1,7 @@
 import getAllComponents from './getAllComponents';
+import { routerHookPropName } from './routerHooks';
 
-export default function triggerHooksOnServer(renderProps, hooks=[], locals) {
+export default function triggerHooksOnServer(renderProps, hooks = [], locals) {
   const componentsProps = new Map();
   const components = getAllComponents(renderProps.components);
 
@@ -41,8 +42,11 @@ export default function triggerHooksOnServer(renderProps, hooks=[], locals) {
   }
   const promises = components.map(Component => {
     const routerHooks = Component[routerHookPropName];
-    const locals = this.getLocals(Component);
-    return hooks.reduce((total, current) => total.then(() => current(locals))
+    const finallocals = getLocals(Component);
+    return hooks
+      .map(k => routerHooks[k])
+      .filter(f => f)
+      .reduce((total, current) => total.then(() => current(finallocals))
       , Promise.resolve());
   });
   return Promise.all(promises).then(() => componentsProps);
