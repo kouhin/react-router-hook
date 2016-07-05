@@ -1,4 +1,4 @@
-import { routerHookPropName } from './routerHook';
+import { routerHookPropName } from './routerHooks';
 
 export default function getAllComponents(components) {
   const arr = Array.isArray(components) ? components : [components];
