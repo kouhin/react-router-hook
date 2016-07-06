@@ -106,6 +106,9 @@ export default class RouterHookContext extends React.Component {
   }
 
   reloadComponent(Component) {
+    if (!Component || !Component[routerHookPropName]) {
+      return null;
+    }
     const routerHooks = Component[routerHookPropName];
     const locals = this.getLocals(Component);
     const willEnterHooks = this.props.routerWillEnterHooks
