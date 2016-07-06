@@ -1,6 +1,6 @@
 {
   "name": "react-router-hook",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "Universal data fetching and lifecycle management for react router with multiple components",
   "main": "./lib/index.js",
   "scripts": {

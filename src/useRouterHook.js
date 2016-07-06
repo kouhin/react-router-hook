@@ -12,17 +12,12 @@ export default function useRouterHook(options) {
         {child}
       </RouterHookContext>
     ),
-    renderRouteComponent: (child, renderProps) => {
-      if (child.type['@@react-router-hooks']) {
-        return (
-          <RouterHookContainer
-            {...renderProps}
-          >
-            {child}
-          </RouterHookContainer>
-        );
-      }
-      return child;
-    },
+    renderRouteComponent: (child, renderProps) => (
+      <RouterHookContainer
+        {...renderProps}
+      >
+        {child}
+      </RouterHookContainer>
+    ),
   };
 }

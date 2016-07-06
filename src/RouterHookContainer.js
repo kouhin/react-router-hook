@@ -23,6 +23,12 @@ export default class RouterHookContainer extends React.Component {
   }
 
   render() {
-    return React.cloneElement(this.props.children, this.state);
+    const {
+      reloadComponent,
+    } = this.context.routerHookContext;
+    return React.cloneElement(this.props.children, {
+      loading: this.state.loading || false,
+      reloadComponent: () => reloadComponent(this.Component),
+    });
   }
 }
