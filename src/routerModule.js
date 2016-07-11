@@ -208,7 +208,14 @@ function getInitStatus(component, willEnterhooks) {
   return 'defer';
 }
 
-export function reloadComponent(component, renderProps) {
+export function reloadComponent(component, {
+  components,
+  history,
+  location,
+  params,
+  route,
+  routes,
+}) {
   return (dispatch, getState, extraArguments) => {
     if (!component || !component[routerHookPropName]) {
       return Promise.resolve();
@@ -227,7 +234,12 @@ export function reloadComponent(component, renderProps) {
 
     const locals = {
       ...restArgs,
-      ...renderProps,
+      components,
+      history,
+      location,
+      params,
+      route: route || routes[routes.length - 1],
+      routes,
       getProps: () => selectProps(getState(), component),
       setProps: p => {
         props = {
