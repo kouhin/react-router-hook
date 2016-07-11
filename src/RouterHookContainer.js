@@ -5,6 +5,7 @@ import { selectProps, selectStatus } from './routerModule';
 export default class RouterHookContainer extends React.Component {
   static propTypes = {
     children: React.PropTypes.node,
+    location: React.PropTypes.object.isRequired,
   }
 
   static contextTypes = {
@@ -21,15 +22,18 @@ export default class RouterHookContainer extends React.Component {
     this.trySubscribe();
   }
 
-  componentWillUnmount() {
-    this.tryUnsubscribe();
-    this.clearCache();
-  }
-
-  componentShouldUpdate(nextProps, nextState) {
+  shouldComponentUpdate(nextProps, nextState) {
+    if (this.props.location !== nextProps.location) {
+      return true;
+    }
     return nextState.componentStatus !== 'init' &&
       (this.state.routerLoading !== nextState.routerLoading ||
         this.state.componentStatus !== nextState.componentStatus);
+  }
+
+  componentWillUnmount() {
+    this.tryUnsubscribe();
+    this.clearCache();
   }
 
   shouldSubscribe() {
@@ -70,6 +74,7 @@ export default class RouterHookContainer extends React.Component {
 
     this.hasStoreStateChanged = true;
     this.setState({
+      storeState,
       componentProps: selectProps(storeState, this.Component),
       componentStatus: selectStatus(storeState, this.Component),
       routerLoading: storeState.routerLoading,
