@@ -1,5 +1,4 @@
 import React from 'react';
-import { routerHookPropName } from './routerHooks';
 import { selectProps, selectStatus } from './routerModule';
 
 export default class RouterHookContainer extends React.Component {
@@ -36,12 +35,8 @@ export default class RouterHookContainer extends React.Component {
     this.clearCache();
   }
 
-  shouldSubscribe() {
-    return !!this.Component && !!this.Component[routerHookPropName];
-  }
-
   trySubscribe() {
-    if (this.shouldSubscribe() && !this.unsubscribe) {
+    if (!this.unsubscribe) {
       this.unsubscribe = this.context.routerHookContext.subscribe(this.handleChange.bind(this));
       this.handleChange();
     }
