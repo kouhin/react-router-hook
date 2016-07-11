@@ -99,7 +99,7 @@ export default class RouterHookContainer extends React.Component {
     return React.cloneElement(this.props.children, {
       ...componentProps,
       componentStatus,
-      reloadComponent,
+      reloadComponent: () => reloadComponent(this.Component),
       routerLoading,
     });
   }
