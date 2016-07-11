@@ -1,10 +1,11 @@
 import React from 'react';
-import { routerHookPropName } from './routerHooks';
-import getAllComponents from './getAllComponents';
+
+import configureStore from './configureStore';
+import { reloadAllComponents, reloadComponent } from './routerModule';
 
 export default class RouterHookContext extends React.Component {
   static propTypes = {
-    children: React.PropTypes.node,
+    children: React.PropTypes.node.isRequired,
     components: React.PropTypes.array.isRequired,
     locals: React.PropTypes.object,
     location: React.PropTypes.object.isRequired,
@@ -21,10 +22,10 @@ export default class RouterHookContext extends React.Component {
     locals: {},
     routerDidEnterHooks: [],
     routerWillEnterHooks: [],
-    onAborted: () => null,
-    onCompleted: () => null,
-    onError: () => null,
-    onStarted: () => null,
+    onAborted: () => { console.info('Aborted'); },
+    onCompleted: () => { console.info('Completed'); },
+    onError: error => { console.error('Error', error); },
+    onStarted: () => { console.error('Started'); },
   };
 
   static childContextTypes = {
@@ -33,21 +34,26 @@ export default class RouterHookContext extends React.Component {
 
   constructor(props) {
     super(props);
-    this.state = {
-      loading: false,
-    };
-    this.componentsProps = new WeakMap();
-    this.setComponentProps = this.setComponentProps.bind(this);
-    this.getComponentProps = this.getComponentProps.bind(this);
-    this.reloadComponent = this.reloadComponent.bind(this);
-    this.reloadAllComponents = this.reloadAllComponents.bind(this);
+    this.store = configureStore({
+      ...props.locals,
+      routerDidEnterHooks: props.routerDidEnterHooks,
+      routerWillEnterHooks: props.routerWillEnterHooks,
+      onAborted: props.onAborted,
+      onCompleted: props.onCompleted,
+      onError: props.onError,
+      onStarted: props.onStarted,
+    });
+    this.reloadComponent = component => this.store.dispatch(reloadComponent(component, this.props));
+    this.reloadAllComponents = (components, renderProps) =>
+      this.store.dispatch(reloadAllComponents(components, renderProps));
   }
 
   getChildContext() {
     return {
       routerHookContext: {
-        setComponentProps: this.setComponentProps,
-        getComponentProps: this.getComponentProps,
+        dispatch: this.store.dispatch,
+        getState: this.store.getState,
+        subscribe: this.store.subscribe,
         reloadComponent: this.reloadComponent,
         reloadAllComponents: this.reloadAllComponents,
       },
@@ -55,109 +61,14 @@ export default class RouterHookContext extends React.Component {
   }
 
   componentDidMount() {
-    this.reloadAllComponents();
+    this.reloadAllComponents(this.props.components, this.props);
   }
 
   componentWillReceiveProps(nextProps) {
     if (nextProps.location === this.props.location) {
       return;
     }
-    if (this.state.loading) {
-      this.props.onAborted();
-    }
-    this.componentsProps = new WeakMap();
-    this.reloadAllComponents();
-  }
-
-  setComponentProps(Component) {
-    return props => {
-      this.componentsProps.set(Component, {
-        ...(this.componentsProps.get(Component) || {}),
-        ...props,
-      });
-    };
-  }
-
-  getComponentProps(Component) {
-    return () => {
-      const props = this.componentsProps.get(Component);
-      if (!props) {
-        this.setComponentProps(Component)({ loading: false });
-        return this.componentsProps.get(Component);
-      }
-      return props;
-    };
-  }
-
-  getLocals(Component) {
-    const {
-      location,
-      params,
-    } = this.props;
-    const locals = (typeof this.props.locals === 'function')
-      ? this.props.locals(Component) : this.props.locals;
-    return {
-      ...locals,
-      location,
-      params,
-      setProps: this.setComponentProps(Component),
-      getProps: this.getComponentProps(Component),
-    };
-  }
-
-  reloadComponent(Component) {
-    if (!Component || !Component[routerHookPropName]) {
-      return null;
-    }
-    const routerHooks = Component[routerHookPropName];
-    const locals = this.getLocals(Component);
-    const willEnterHooks = this.props.routerWillEnterHooks
-      .map(key => routerHooks[key])
-      .filter(f => f);
-    const didEnterHooks = this.props.routerDidEnterHooks
-      .map(key => routerHooks[key])
-      .filter(f => f);
-
-    const setProps = this.setComponentProps(Component);
-    setProps({
-      loading: true,
-    });
-    const willEnterHooksPromise = willEnterHooks.length < 1
-      ? Promise.resolve() : willEnterHooks.reduce(
-        (total, current) => total.then(() => current(locals))
-        , Promise.resolve()).then(() => {
-          setProps({
-            loading: false,
-          });
-        });
-    return didEnterHooks.length < 1
-      ? willEnterHooksPromise : didEnterHooks.reduce(
-        (total, current) => total.then(() => current(locals))
-        , willEnterHooksPromise).then(() => {
-        });
-  }
-
-  reloadAllComponents() {
-    this.setState({
-      loading: true,
-    }, () => {
-      this.props.onStarted();
-      const promises = getAllComponents(this.props.components)
-        .map(this.reloadComponent);
-      Promise.all(promises)
-        .then(() => {
-          this.setState({
-            loading: false,
-          });
-          this.props.onCompleted();
-        })
-        .catch(err => {
-          this.setState({
-            loading: false,
-          });
-          this.props.onError(err);
-        });
-    });
+    this.reloadAllComponents(nextProps.components, nextProps);
   }
 
   render() {
