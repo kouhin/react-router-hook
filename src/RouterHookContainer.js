@@ -83,15 +83,19 @@ export default class RouterHookContainer extends React.Component {
       componentStatus,
       routerLoading,
     } = this.state;
-    const {
-      reloadComponent,
-    } = this.context.routerHookContext;
 
     if (componentStatus === 'init') {
       return null;
     }
 
+    const { reloadComponent } = this.context.routerHookContext;
+    const {
+      children, // eslint-disable-line no-unused-vars
+      ...restProps,
+    } = this.props;
+
     return React.cloneElement(this.props.children, {
+      ...restProps,
       ...componentProps,
       componentStatus,
       reloadComponent: () => reloadComponent(this.Component),
