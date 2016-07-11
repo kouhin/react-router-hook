@@ -28,7 +28,8 @@ export default class RouterHookContainer extends React.Component {
 
   componentShouldUpdate(nextProps, nextState) {
     return nextState.componentStatus !== 'init' &&
-      this.state.componentStatus !== nextState.componentStatus;
+      (this.state.routerLoading !== nextState.routerLoading ||
+        this.state.componentStatus !== nextState.componentStatus);
   }
 
   shouldSubscribe() {
@@ -71,6 +72,7 @@ export default class RouterHookContainer extends React.Component {
     this.setState({
       componentProps: selectProps(storeState, this.Component),
       componentStatus: selectStatus(storeState, this.Component),
+      routerLoading: storeState.routerLoading,
     });
   }
 
@@ -79,12 +81,11 @@ export default class RouterHookContainer extends React.Component {
     const {
       componentProps = {},
       componentStatus,
+      routerLoading,
     } = this.state;
     const {
       reloadComponent,
-      getState,
     } = this.context.routerHookContext;
-    const routerLoading = getState().routerLoading;
 
     if (componentStatus === 'init') {
       return null;
