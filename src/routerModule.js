@@ -275,10 +275,10 @@ export function reloadAllComponents(components, renderProps) {
   return (dispatch, getState, extraArguments) => {
     const {
       routerWillEnterHooks = [],
-      onAborted = () => console.log('Aborted'),
-      onCompleted = () => console.log('Completed'),
-      onError = err => console.log('Error', err),
-      onStarted = () => console.log('Started'),
+      onAborted = () => {},
+      onCompleted = () => {},
+      onError = () => {},
+      onStarted = () => {},
     } = extraArguments;
 
     if (getState().routerLoading) {
@@ -299,6 +299,7 @@ export function reloadAllComponents(components, renderProps) {
       .catch(err => {
         dispatch(routerDidLoad());
         onError(err);
+        throw err;
       });
   };
 }
