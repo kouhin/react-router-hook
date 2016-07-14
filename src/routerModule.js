@@ -210,7 +210,6 @@ function getInitStatus(component, willEnterhooks) {
 
 export function reloadComponent(component, {
   components,
-  history,
   location,
   params,
   route,
@@ -235,7 +234,6 @@ export function reloadComponent(component, {
     const locals = {
       ...restArgs,
       components,
-      history,
       location,
       params,
       route: route || routes[routes.length - 1],

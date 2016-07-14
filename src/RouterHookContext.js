@@ -22,10 +22,10 @@ export default class RouterHookContext extends React.Component {
     locals: {},
     routerDidEnterHooks: [],
     routerWillEnterHooks: [],
-    onAborted: () => { console.info('Aborted'); },
-    onCompleted: () => { console.info('Completed'); },
-    onError: error => { console.error('Error', error); },
-    onStarted: () => { console.error('Started'); },
+    onAborted: () => {},
+    onCompleted: () => {},
+    onError: () => {},
+    onStarted: () => {},
   };
 
   static childContextTypes = {
