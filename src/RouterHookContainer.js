@@ -22,11 +22,9 @@ export default class RouterHookContainer extends React.Component {
   }
 
   shouldComponentUpdate(nextProps, nextState) {
-    if (this.props.location !== nextProps.location) {
-      return true;
-    }
-    return this.state.routerLoading !== nextState.routerLoading ||
-        this.state.componentStatus !== nextState.componentStatus;
+    return this.props !== nextProps ||
+      this.state.routerLoading !== nextState.routerLoading ||
+      this.state.componentStatus !== nextState.componentStatus;
   }
 
   componentWillUnmount() {
@@ -83,23 +81,23 @@ export default class RouterHookContainer extends React.Component {
       routerLoading,
     } = this.state;
 
-    if (componentStatus === 'init') {
-      return this.prevRender || null;
-    }
-
     const { reloadComponent } = this.context.routerHookContext;
     const {
       children, // eslint-disable-line no-unused-vars
       ...restProps,
     } = this.props;
 
-    this.prevRender = React.cloneElement(this.props.children, {
-      ...restProps,
-      ...componentProps,
+    if (componentStatus !== 'init') {
+      this.prevChildren = React.cloneElement(this.props.children, {
+        ...restProps,
+        ...componentProps,
+      });
+    }
+
+    return React.cloneElement(this.prevChildren, {
       componentStatus,
       reloadComponent: () => reloadComponent(this.Component),
       routerLoading,
     });
-    return this.prevRender;
   }
 }
