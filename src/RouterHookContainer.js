@@ -4,6 +4,7 @@ import { selectProps, selectStatus } from './routerModule';
 export default class RouterHookContainer extends React.Component {
   static propTypes = {
     children: React.PropTypes.node,
+    initStatus: React.PropTypes.oneOf(['init', 'defer', 'done']),
     location: React.PropTypes.object.isRequired,
   }
 
@@ -87,17 +88,26 @@ export default class RouterHookContainer extends React.Component {
       ...restProps,
     } = this.props;
 
-    if (componentStatus !== 'init') {
-      this.prevChildren = React.cloneElement(this.props.children, {
-        ...restProps,
-        ...componentProps,
+    const initStatus = componentStatus || this.props.initStatus;
+
+    if (initStatus === 'init') {
+      if (!this.prevChildren) {
+        return null;
+      }
+      return React.cloneElement(this.prevChildren, {
+        componentStatus: initStatus,
+        reloadComponent: () => reloadComponent(this.Component),
+        routerLoading,
       });
     }
 
-    return React.cloneElement(this.prevChildren, {
-      componentStatus,
+    this.prevChildren = React.cloneElement(this.props.children, {
+      ...restProps,
+      ...componentProps,
+      componentStatus: initStatus,
       reloadComponent: () => reloadComponent(this.Component),
       routerLoading,
     });
+    return this.prevChildren;
   }
 }

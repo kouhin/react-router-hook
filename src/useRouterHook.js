@@ -1,6 +1,7 @@
 import React from 'react';
 import RouterHookContext from './RouterHookContext';
 import RouterHookContainer from './RouterHookContainer';
+import getInitStatus from './getInitStatus';
 
 export default function useRouterHook(options) {
   return {
@@ -15,6 +16,7 @@ export default function useRouterHook(options) {
     renderRouteComponent: (child, renderProps) => (
       <RouterHookContainer
         {...renderProps}
+        initStatus={getInitStatus(child.type, options.routerWillEnterHooks)}
       >
         {child}
       </RouterHookContainer>

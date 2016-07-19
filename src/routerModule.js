@@ -1,4 +1,5 @@
 import getAllComponents from './getAllComponents';
+import getInitStatus from './getInitStatus';
 import { routerHookPropName } from './routerHooks';
 
 /**
@@ -193,19 +194,6 @@ export function componentDidLoad(component, props = {}) {
       props,
     },
   };
-}
-
-function getInitStatus(component, willEnterhooks) {
-  if (!component || !component[routerHookPropName]) {
-    return 'init';
-  }
-  const hooks = component[routerHookPropName];
-  for (let i = 0; i < willEnterhooks.length; i++) {
-    if (!!hooks[willEnterhooks[i]]) {
-      return 'init';
-    }
-  }
-  return 'defer';
 }
 
 export function reloadComponent(component, {
