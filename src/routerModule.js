@@ -212,7 +212,7 @@ export function reloadComponent(component, {
       return Promise.resolve();
     }
     if (debug.enabled) {
-      debug(`Reloading component ${component.displayName || component}`);
+      debug('Reloading component', (component.displayName || component));
     }
     const routerHooks = component[routerHookPropName];
     let props = {};
@@ -260,7 +260,7 @@ export function reloadComponent(component, {
       (total, current) => total.then(() => current(locals))
       , willEnterHooksPromise).then(() => {
         if (debug.enabled) {
-          debug(`Reloading component ...finished in ${Date.now() - start} ms, ${component.displayName || component}`); // eslint-disable-line max-len
+          debug(`Reloading component... finished in ${Date.now() - start} ms`, (component.displayName || component)); // eslint-disable-line max-len
         }
         dispatch(componentDidLoad(component, props));
       });
