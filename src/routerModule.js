@@ -1,6 +1,9 @@
 import getAllComponents from './getAllComponents';
 import getInitStatus from './getInitStatus';
 import { routerHookPropName } from './routerHooks';
+import Debug from 'debug';
+
+const debug = new Debug('react-router-hook:routerModule');
 
 /**
  * Router action types:
@@ -204,8 +207,12 @@ export function reloadComponent(component, {
   routes,
 }) {
   return (dispatch, getState, extraArguments) => {
+    const start = Date.now();
     if (!component || !component[routerHookPropName]) {
       return Promise.resolve();
+    }
+    if (debug.enabled) {
+      debug(`Reloading component ${component.displayName || component}`);
     }
     const routerHooks = component[routerHookPropName];
     let props = {};
@@ -252,6 +259,9 @@ export function reloadComponent(component, {
     return didEnterHooks.reduce(
       (total, current) => total.then(() => current(locals))
       , willEnterHooksPromise).then(() => {
+        if (debug.enabled) {
+          debug(`Reloading component ...finished in ${Date.now() - start} ms, ${component.displayName || component}`); // eslint-disable-line max-len
+        }
         dispatch(componentDidLoad(component, props));
       });
   };
@@ -259,6 +269,10 @@ export function reloadComponent(component, {
 
 export function reloadAllComponents(components, renderProps) {
   return (dispatch, getState, extraArguments) => {
+    const start = Date.now();
+    if (debug.enabled) {
+      debug('Reloading all components');
+    }
     const {
       routerWillEnterHooks = [],
       onAborted = () => {},
@@ -279,6 +293,9 @@ export function reloadAllComponents(components, renderProps) {
     return Promise
       .all(promises)
       .then(() => {
+        if (debug.enabled) {
+          debug(`Reloading all components...finished in ${Date.now() - start} ms`);
+        }
         dispatch(routerDidLoad());
         onCompleted();
       })

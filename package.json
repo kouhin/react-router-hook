@@ -55,6 +55,7 @@
     "webpack": "^1.13.1"
   },
   "dependencies": {
+    "debug": "^2.2.0",
     "redux": "^3.5.2",
     "redux-thunk": "^2.1.0"
   }
