@@ -18,15 +18,17 @@ export default class RouterHookContext extends React.Component {
     onStarted: React.PropTypes.func,
   };
 
-  static defaultProps = {
-    locals: {},
-    routerDidEnterHooks: [],
-    routerWillEnterHooks: [],
-    onAborted: () => {},
-    onCompleted: () => {},
-    onError: () => {},
-    onStarted: () => {},
-  };
+  static get defaultProps() {
+    return {
+      locals: {},
+      routerDidEnterHooks: [],
+      routerWillEnterHooks: [],
+      onAborted: () => {},
+      onCompleted: () => {},
+      onError: () => {},
+      onStarted: () => {},
+    };
+  }
 
   static childContextTypes = {
     routerHookContext: React.PropTypes.object,
