@@ -23,7 +23,7 @@ export default class RouterHookContainer extends React.Component {
   }
 
   shouldComponentUpdate(nextProps, nextState) {
-    return this.props !== nextProps ||
+    return this.props.location !== nextProps.location ||
       this.state.routerLoading !== nextState.routerLoading ||
       this.state.componentStatus !== nextState.componentStatus;
   }
@@ -83,11 +83,6 @@ export default class RouterHookContainer extends React.Component {
     } = this.state;
 
     const { reloadComponent } = this.context.routerHookContext;
-    const {
-      children, // eslint-disable-line no-unused-vars
-      ...restProps,
-    } = this.props;
-
     const initStatus = componentStatus || this.props.initStatus;
 
     if (initStatus === 'init') {
@@ -102,7 +97,6 @@ export default class RouterHookContainer extends React.Component {
     }
 
     this.prevChildren = React.cloneElement(this.props.children, {
-      ...restProps,
       ...componentProps,
       componentStatus: initStatus,
       reloadComponent: () => reloadComponent(this.Component),
