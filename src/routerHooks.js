@@ -1,5 +1,7 @@
-export const routerHookPropName = '@@react-router-hook';
+import { routerHookPropName } from './constants';
 
-export const routerHooks = hooks => Component => {
+const routerHooks = hooks => Component => {
   Component[routerHookPropName] = hooks; // eslint-disable-line no-param-reassign
 };
+
+export default routerHooks;

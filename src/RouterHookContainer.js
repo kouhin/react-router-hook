@@ -1,10 +1,15 @@
 import React from 'react';
-import { selectProps, selectStatus } from './routerModule';
+import update from 'react-addons-update';
+import Debug from 'debug';
+import { ComponentStatus, routerHookPropName } from './constants';
+import getInitStatus from './getInitStatus';
+
+const debug = new Debug('react-router-hook:RouterHookContainer');
+const ABORT = 'abort';
 
 export default class RouterHookContainer extends React.Component {
   static propTypes = {
     children: React.PropTypes.node,
-    initStatus: React.PropTypes.oneOf(['init', 'defer', 'done']),
     location: React.PropTypes.object.isRequired,
   }
 
@@ -14,94 +19,178 @@ export default class RouterHookContainer extends React.Component {
 
   constructor(props, context) {
     super(props, context);
-    this.Component = props.children.type;
-    this.state = {};
+    this.Component = this.props.children.type;
+    this.reportStatus = this.reportStatus.bind(this);
+    this.reloadComponent = this.reloadComponent.bind(this);
+
+    const initStatus = getInitStatus(
+      this.Component,
+      context.routerHookContext.routerWillEnterHooks
+    );
+    this.state = {
+      status: initStatus,
+      childProps: {},
+    };
+  }
+
+  componentWillMount() {
+    this.reportStatus(this.state.status);
   }
 
   componentDidMount() {
-    this.trySubscribe();
+    this.reloadComponent(true);
   }
 
-  shouldComponentUpdate(nextProps, nextState) {
-    return this.props.location !== nextProps.location ||
-      this.state.routerLoading !== nextState.routerLoading ||
-      this.state.componentStatus !== nextState.componentStatus;
-  }
-
-  componentWillUnmount() {
-    this.tryUnsubscribe();
-    this.clearCache();
-  }
-
-  trySubscribe() {
-    if (!this.unsubscribe) {
-      this.unsubscribe = this.context.routerHookContext.subscribe(this.handleChange.bind(this));
-      this.handleChange();
+  componentDidUpdate(prevProps) {
+    if (this.props.location !== prevProps.location) {
+      this.reloadComponent(true);
     }
   }
 
-  tryUnsubscribe() {
-    if (this.unsubscribe) {
-      this.unsubscribe();
-      this.unsubscribe = null;
+  reportStatus(status, err) {
+    if (!status) {
+      throw new Error('Status is undefined', this.Component.displayName, status);
     }
+    this.context.routerHookContext.setComponentStatus(this.Component, status, err);
   }
 
-  clearCache() {
-    this.hasStoreStateChanged = null;
-  }
+  reloadComponent(shouldReportStatus = false) {
+    const start = Date.now();
+    const {
+      locals,
+      routerDidEnterHooks,
+      routerWillEnterHooks,
+    } = this.context.routerHookContext;
 
-  handleChange() {
-    if (!this.unsubscribe) {
-      return;
+    const initStatus = getInitStatus(
+      this.Component,
+      this.context.routerHookContext.routerWillEnterHooks
+    );
+
+    if (shouldReportStatus) {
+      this.reportStatus(initStatus);
     }
 
-    const storeState = this.context.routerHookContext.getState();
-    if (!storeState) {
-      console.error('storeState is empty', storeState, this.context.routerHookContext);
-    }
-    const prevStoreState = this.state.storeState;
-    if (prevStoreState === storeState) {
-      return;
+    if (initStatus === ComponentStatus.DONE) {
+      return Promise.resolve();
     }
 
-    this.hasStoreStateChanged = true;
-    this.setState({
-      storeState,
-      componentProps: selectProps(storeState, this.Component),
-      componentStatus: selectStatus(storeState, this.Component),
-      routerLoading: storeState.routerLoading,
-    });
+    const routerHooks = this.Component[routerHookPropName];
+
+    // eslint-disable-next-line no-unused-vars
+    const { children, ...restProps } = this.props;
+    const location = this.props.location;
+
+    const args = {
+      ...restProps,
+      ...locals,
+      getProps: () => this.state.childProps,
+      setProps: p => {
+        if (location === this.props.location) {
+          this.setState(update(this.state, {
+            childProps: {
+              $merge: p,
+            },
+          }));
+        }
+      },
+    };
+
+    return Promise.resolve()
+      .then(() => {
+        if (location !== this.props.location) {
+          return Promise.reject(ABORT);
+        }
+        if (initStatus === 'init') {
+          return Promise.resolve();
+        }
+        const willEnterHooks = routerWillEnterHooks
+          .map(key => routerHooks[key])
+          .filter(f => f);
+        return willEnterHooks.reduce(
+          (total, current) => total.then(() => (
+            location === this.props.location ? current(args) : Promise.resolve()
+          )), Promise.resolve());
+      })
+      .then(() => {
+        if (location !== this.props.location) {
+          return Promise.reject(ABORT);
+        }
+        if (shouldReportStatus) {
+          this.reportStatus(ComponentStatus.DEFER);
+        }
+        return this.setState(update(this.state, {
+          status: {
+            $set: ComponentStatus.DEFER,
+          },
+        }));
+      })
+      .then(() => {
+        if (location !== this.props.location) {
+          return Promise.reject(ABORT);
+        }
+        const didEnterHooks = routerDidEnterHooks
+          .map(key => routerHooks[key])
+          .filter(f => f);
+        return didEnterHooks.reduce(
+          (total, current) => total.then(() => (
+            location === this.props.location ? current(args) : Promise.resolve()
+          ))
+          , Promise.resolve());
+      })
+      .then(() => {
+        if (location !== this.props.location) {
+          return Promise.reject(ABORT);
+        }
+        if (shouldReportStatus) {
+          this.reportStatus(ComponentStatus.DONE);
+        }
+        return this.setState(update(this.state, {
+          status: {
+            $set: ComponentStatus.DONE,
+          },
+        }));
+      })
+      .then(() => {
+        if (debug.enabled) {
+          debug(`Reloading component... finished in ${Date.now() - start} ms`, (this.Component.displayName || this.Component)); // eslint-disable-line max-len
+        }
+      })
+      .catch(err => {
+        if (err === ABORT) {
+          return;
+        }
+        if (shouldReportStatus) {
+          this.reportStatus(ComponentStatus.DONE, err);
+        }
+        this.setState(update(this.state, {
+          status: {
+            $set: ComponentStatus.DONE,
+          },
+        }));
+      });
   }
 
   render() {
-    this.hasStoreStateChanged = false;
-    const {
-      componentProps = {},
-      componentStatus,
-      routerLoading,
-    } = this.state;
+    const status = this.state.status;
+    // eslint-disable-next-line no-unused-vars
+    const { children, ...restProps } = this.props;
+    const passProps = {
+      ...restProps,
+      ...this.state.childProps,
+      componentStatus: status,
+      reloadComponent: this.reloadComponent,
+      routerLoading: this.context.routerHookContext.routerLoading,
+    };
 
-    const { reloadComponent } = this.context.routerHookContext;
-    const initStatus = componentStatus || this.props.initStatus;
-
-    if (initStatus === 'init') {
+    if (status === ComponentStatus.INIT) {
       if (!this.prevChildren) {
         return null;
       }
-      return React.cloneElement(this.prevChildren, {
-        componentStatus: initStatus,
-        reloadComponent: () => reloadComponent(this.Component),
-        routerLoading,
-      });
+      return React.cloneElement(this.prevChildren, passProps);
     }
 
-    this.prevChildren = React.cloneElement(this.props.children, {
-      ...componentProps,
-      componentStatus: initStatus,
-      reloadComponent: () => reloadComponent(this.Component),
-      routerLoading,
-    });
+    this.prevChildren = React.cloneElement(this.props.children, passProps);
     return this.prevChildren;
   }
 }

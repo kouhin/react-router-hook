@@ -1,11 +1,22 @@
-import configureStore from './configureStore';
-import { reloadAllComponents } from './routerModule';
+import getAllComponents from './getAllComponents';
+import { routerHookPropName } from './constants';
 
-export default function triggerHooksOnServer(renderProps, hooks = [], locals) {
-  const store = configureStore({
+export default function triggerHooksOnServer(renderProps, hooks = [], locals, {
+  onComponentError = err => { throw err; },
+}) {
+  const args = {
+    ...renderProps,
     ...locals,
-    routerWillEnterHooks: hooks,
-  });
-  return store.dispatch(reloadAllComponents(renderProps.components, renderProps))
-    .then(() => store);
+  };
+
+  const promises = getAllComponents(renderProps.components)
+    .map(component => {
+      const routerHooks = component[routerHookPropName];
+      const runHooks = hooks.map(key => routerHooks[key]).filter(f => f);
+      return runHooks.reduce(
+        (total, current) => total.then(() => current(args))
+        , Promise.resolve())
+        .catch(err => onComponentError({ Component: component, error: err }));
+    });
+  return Promise.all(promises);
 }

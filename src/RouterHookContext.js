@@ -1,7 +1,6 @@
 import React from 'react';
-
-import configureStore from './configureStore';
-import { reloadAllComponents, reloadComponent } from './routerModule';
+import { ComponentStatus } from './constants';
+import getAllComponents from './getAllComponents';
 
 export default class RouterHookContext extends React.Component {
   static propTypes = {
@@ -36,41 +35,75 @@ export default class RouterHookContext extends React.Component {
 
   constructor(props) {
     super(props);
-    this.store = configureStore({
-      ...props.locals,
-      routerDidEnterHooks: props.routerDidEnterHooks,
-      routerWillEnterHooks: props.routerWillEnterHooks,
-      onAborted: props.onAborted,
-      onCompleted: props.onCompleted,
-      onError: props.onError,
-      onStarted: props.onStarted,
-    });
-    this.reloadComponent = component => this.store.dispatch(reloadComponent(component, this.props));
-    this.reloadAllComponents = (components, renderProps) =>
-      this.store.dispatch(reloadAllComponents(components, renderProps));
+    this.componentStatuses = new WeakMap();
+    this.setComponentStatus = this.setComponentStatus.bind(this);
+    this.getComponentStatus = this.getComponentStatus.bind(this);
+    this.updateRouterLoading = this.updateRouterLoading.bind(this);
+    this.loading = false;
+    this.state = {
+      routerLoading: this.loading,
+    };
   }
 
   getChildContext() {
     return {
       routerHookContext: {
-        dispatch: this.store.dispatch,
-        getState: this.store.getState,
-        subscribe: this.store.subscribe,
-        reloadComponent: this.reloadComponent,
-        reloadAllComponents: this.reloadAllComponents,
+        components: this.props.components,
+        getComponentStatus: this.getComponentStatus,
+        routerLoading: this.state.routerLoading,
+        locals: this.props.locals,
+        routerDidEnterHooks: this.props.routerDidEnterHooks,
+        routerWillEnterHooks: this.props.routerWillEnterHooks,
+        setComponentStatus: this.setComponentStatus,
       },
     };
   }
 
   componentDidMount() {
-    this.reloadAllComponents(this.props.components, this.props);
+    this.props.onStarted();
   }
 
   componentWillReceiveProps(nextProps) {
     if (nextProps.location === this.props.location) {
       return;
     }
-    this.reloadAllComponents(nextProps.components, nextProps);
+    if (this.loading) {
+      this.props.onAborted();
+    }
+  }
+
+  setComponentStatus(Component, status, err) {
+    this.componentStatuses.set(Component, status);
+    this.updateRouterLoading();
+    if (err) {
+      this.props.onError({ Component, error: err });
+    }
+  }
+
+  getComponentStatus(Component) {
+    return this.componentStatuses.get(Component);
+  }
+
+  updateRouterLoading() {
+    const loading = (() => {
+      const components = getAllComponents(this.props.components);
+      for (let i = 0, length = components.length; i < length; i++) {
+        const status = this.componentStatuses.get(components[i]);
+        if (status && status !== ComponentStatus.DONE) {
+          return true;
+        }
+      }
+      return false;
+    })();
+    if (this.loading !== loading) {
+      this.loading = loading;
+      if (!loading) {
+        this.props.onCompleted();
+      }
+      this.setState({
+        routerLoading: this.loading,
+      });
+    }
   }
 
   render() {
