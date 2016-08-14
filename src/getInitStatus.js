@@ -1,4 +1,4 @@
-import { routerHookPropName } from './routerHooks';
+import { routerHookPropName } from './constants';
 
 export default function getInitStatus(component, willEnterhooks) {
   if (!component || !component[routerHookPropName]) {
@@ -6,7 +6,7 @@ export default function getInitStatus(component, willEnterhooks) {
   }
   const hooks = component[routerHookPropName];
   for (let i = 0; i < willEnterhooks.length; i++) {
-    if (!!hooks[willEnterhooks[i]]) {
+    if (hooks[willEnterhooks[i]]) {
       return 'init';
     }
   }

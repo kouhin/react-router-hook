@@ -1,4 +1,5 @@
-export { routerHooks, routerHookPropName } from './routerHooks';
+export { routerHookPropName, ComponentStatus } from './constants';
+export routerHooks from './routerHooks';
 export RouterHookContainer from './RouterHookContainer';
 export RouterHookContext from './RouterHookContext';
 export useRouterHook from './useRouterHook';
