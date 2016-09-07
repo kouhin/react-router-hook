@@ -41,6 +41,20 @@ export default class RouterHookContainer extends React.Component {
     this.reloadComponent(true);
   }
 
+  componentWillReceiveProps(nextProps, nextContext) {
+    if (this.props.children.type !== nextProps.children.type) {
+      this.Component = nextProps.children.type;
+      const initStatus = getInitStatus(
+        this.Component,
+        nextContext.routerHookContext.routerWillEnterHooks
+      );
+      this.setState({
+        status: initStatus,
+        childProps: {},
+      });
+    }
+  }
+
   componentDidUpdate(prevProps) {
     if (this.props.location !== prevProps.location) {
       this.reloadComponent(true);
