@@ -1,4 +1,6 @@
 import React from 'react';
+import setImmediate from 'async/setImmediate';
+import throttle from 'lodash/throttle';
 import { ComponentStatus } from './constants';
 import getAllComponents from './getAllComponents';
 
@@ -38,7 +40,7 @@ export default class RouterHookContext extends React.Component {
     this.componentStatuses = new WeakMap();
     this.setComponentStatus = this.setComponentStatus.bind(this);
     this.getComponentStatus = this.getComponentStatus.bind(this);
-    this.updateRouterLoading = this.updateRouterLoading.bind(this);
+    this.updateRouterLoading = throttle(this.updateRouterLoading, 100).bind(this);
     this.loading = false;
     this.state = {
       routerLoading: this.loading,
@@ -73,11 +75,13 @@ export default class RouterHookContext extends React.Component {
   }
 
   setComponentStatus(Component, status, err) {
-    this.componentStatuses.set(Component, status);
-    this.updateRouterLoading();
-    if (err) {
-      this.props.onError({ Component, error: err });
-    }
+    setImmediate(() => {
+      this.componentStatuses.set(Component, status);
+      this.updateRouterLoading();
+      if (err) {
+        this.props.onError({ Component, error: err });
+      }
+    });
   }
 
   getComponentStatus(Component) {
@@ -100,8 +104,10 @@ export default class RouterHookContext extends React.Component {
       if (!loading) {
         this.props.onCompleted();
       }
-      this.setState({
-        routerLoading: this.loading,
+      setImmediate(() => {
+        this.setState({
+          routerLoading: this.loading,
+        });
       });
     }
   }
