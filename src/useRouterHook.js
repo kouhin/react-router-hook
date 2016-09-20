@@ -3,21 +3,17 @@ import RouterHookContext from './RouterHookContext';
 import RouterHookContainer from './RouterHookContainer';
 
 export default function useRouterHook(options) {
+  const context = <RouterHookContext />;
+  const container = <RouterHookContainer />;
   return {
     renderRouterContext: (child, renderProps) => (
-      <RouterHookContext
-        {...renderProps}
-        {...options}
-      >
-        {child}
-      </RouterHookContext>
+      React.cloneElement(context, {
+        ...renderProps,
+        ...options,
+      }, child)
     ),
     renderRouteComponent: (child, renderProps) => (
-      <RouterHookContainer
-        {...renderProps}
-      >
-        {child}
-      </RouterHookContainer>
+      React.cloneElement(container, renderProps, child)
     ),
   };
 }

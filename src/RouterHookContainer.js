@@ -1,6 +1,11 @@
 import React from 'react';
 import update from 'react-addons-update';
 import Debug from 'debug';
+import setImmediate from 'async/setImmediate';
+import series from 'async/series';
+import asyncify from 'async/asyncify';
+import mapSeries from 'async/mapSeries';
+
 import { ComponentStatus, routerHookPropName } from './constants';
 import getInitStatus from './getInitStatus';
 
@@ -19,17 +24,18 @@ export default class RouterHookContainer extends React.Component {
 
   constructor(props, context) {
     super(props, context);
-    this.Component = this.props.children.type;
     this.reportStatus = this.reportStatus.bind(this);
     this.reloadComponent = this.reloadComponent.bind(this);
 
     const initStatus = getInitStatus(
-      this.Component,
+      props.children.type,
       context.routerHookContext.routerWillEnterHooks
     );
+    this.shouldReload = false;
     this.state = {
       status: initStatus,
       childProps: {},
+      lastUpdated: Date.now(),
     };
   }
 
@@ -38,27 +44,48 @@ export default class RouterHookContainer extends React.Component {
   }
 
   componentDidMount() {
-    this.reloadComponent(true);
+    setImmediate(() => {
+      this.reloadComponent(true);
+    });
   }
 
-  componentWillReceiveProps(nextProps, nextContext) {
-    if (this.props.children.type !== nextProps.children.type) {
-      this.Component = nextProps.children.type;
-      const initStatus = getInitStatus(
-        this.Component,
-        nextContext.routerHookContext.routerWillEnterHooks
-      );
+  componentWillReceiveProps(nextProps) {
+    if (this.props.location !== nextProps.location) {
       this.setState({
-        status: initStatus,
+        status: getInitStatus(
+            this.Component,
+            this.context.routerHookContext.routerWillEnterHooks
+        ),
         childProps: {},
+      });
+      setImmediate(() => {
+        this.shouldReload = true;
+        this.setState({
+          lastUpdated: Date.now(),
+        });
+      });
+    } else {
+      this.setState({
+        lastUpdated: Date.now(),
       });
     }
   }
 
-  componentDidUpdate(prevProps) {
-    if (this.props.location !== prevProps.location) {
-      this.reloadComponent(true);
+  shouldComponentUpdate(nextProps, nextState) {
+    return this.state.lastUpdated !== nextState.lastUpdated;
+  }
+
+  componentDidUpdate() {
+    if (this.shouldReload) {
+      this.shouldReload = false;
+      setImmediate(() => {
+        this.reloadComponent(true);
+      });
     }
+  }
+
+  get Component() {
+    return this.props.children.type;
   }
 
   reportStatus(status, err) {
@@ -86,7 +113,7 @@ export default class RouterHookContainer extends React.Component {
     }
 
     if (initStatus === ComponentStatus.DONE) {
-      return Promise.resolve();
+      return;
     }
 
     const routerHooks = this.Component[routerHookPropName];
@@ -101,88 +128,113 @@ export default class RouterHookContainer extends React.Component {
       getProps: () => this.state.childProps,
       setProps: p => {
         if (location === this.props.location) {
-          this.setState(update(this.state, {
-            childProps: {
-              $merge: p,
-            },
-          }));
+          setImmediate(() => {
+            this.setState(update(this.state, {
+              lastUpdated: {
+                $set: Date.now(),
+              },
+              childProps: {
+                $merge: p,
+              },
+            }));
+          });
         }
       },
     };
 
-    return Promise.resolve()
-      .then(() => {
-        if (location !== this.props.location) {
-          return Promise.reject(ABORT);
-        }
-        if (initStatus === 'init') {
-          return Promise.resolve();
-        }
-        const willEnterHooks = routerWillEnterHooks
-          .map(key => routerHooks[key])
-          .filter(f => f);
-        return willEnterHooks.reduce(
-          (total, current) => total.then(() => (
-            location === this.props.location ? current(args) : Promise.resolve()
-          )), Promise.resolve());
-      })
-      .then(() => {
-        if (location !== this.props.location) {
-          return Promise.reject(ABORT);
-        }
-        if (shouldReportStatus) {
-          this.reportStatus(ComponentStatus.DEFER);
-        }
-        return this.setState(update(this.state, {
-          status: {
-            $set: ComponentStatus.DEFER,
-          },
-        }));
-      })
-      .then(() => {
-        if (location !== this.props.location) {
-          return Promise.reject(ABORT);
-        }
-        const didEnterHooks = routerDidEnterHooks
-          .map(key => routerHooks[key])
-          .filter(f => f);
-        return didEnterHooks.reduce(
-          (total, current) => total.then(() => (
-            location === this.props.location ? current(args) : Promise.resolve()
-          ))
-          , Promise.resolve());
-      })
-      .then(() => {
-        if (location !== this.props.location) {
-          return Promise.reject(ABORT);
-        }
-        if (shouldReportStatus) {
-          this.reportStatus(ComponentStatus.DONE);
-        }
-        return this.setState(update(this.state, {
-          status: {
-            $set: ComponentStatus.DONE,
-          },
-        }));
-      })
-      .then(() => {
+    series([
+      callback => {
+        setImmediate(() => {
+          if (location !== this.props.location) {
+            callback(ABORT);
+            return;
+          }
+          if (initStatus === 'init') {
+            callback();
+            return;
+          }
+          const willEnterHooks = routerWillEnterHooks
+            .map(key => routerHooks[key])
+            .filter(f => f)
+            .map(f => asyncify(f));
+          mapSeries(willEnterHooks, (hook, cb) => {
+            if (location === this.props.location) {
+              setImmediate(() => {
+                hook(args, cb);
+              });
+            }
+          }, callback);
+        });
+      },
+      callback => {
+        setImmediate(() => {
+          if (location !== this.props.location) {
+            callback(ABORT);
+            return;
+          }
+          if (shouldReportStatus) {
+            this.reportStatus(ComponentStatus.DEFER);
+          }
+          this.setState({
+            lastUpdated: Date.now(),
+            status: ComponentStatus.DEFER,
+          }, callback);
+        });
+      },
+      callback => {
+        setImmediate(() => {
+          if (location !== this.props.location) {
+            callback(ABORT);
+            return;
+          }
+          const didEnterHooks = routerDidEnterHooks
+            .map(key => routerHooks[key])
+            .filter(f => f)
+            .map(f => asyncify(f));
+          mapSeries(didEnterHooks, (hook, cb) => {
+            if (location === this.props.location) {
+              setImmediate(() => {
+                hook(args, cb);
+              });
+            }
+          }, callback);
+        });
+      },
+      callback => {
+        setImmediate(() => {
+          if (location !== this.props.location) {
+            callback(ABORT);
+            return;
+          }
+          if (shouldReportStatus) {
+            this.reportStatus(ComponentStatus.DONE);
+          }
+          this.setState({
+            lastUpdated: Date.now(),
+            status: ComponentStatus.DONE,
+          }, callback);
+        });
+      },
+      callback => {
         if (debug.enabled) {
           debug(`Reloading component... finished in ${Date.now() - start} ms`, (this.Component.displayName || this.Component)); // eslint-disable-line max-len
+          callback();
         }
-      })
-      .catch(err => {
-        if (err === ABORT) {
-          return;
-        }
-        if (shouldReportStatus) {
-          this.reportStatus(ComponentStatus.DONE, err);
-        }
-        this.setState(update(this.state, {
-          status: {
-            $set: ComponentStatus.DONE,
-          },
-        }));
+      },
+    ], err => {
+      if (err && err === ABORT) {
+        return;
+      }
+      if (shouldReportStatus) {
+        this.reportStatus(ComponentStatus.DONE, err);
+      }
+      setImmediate(() => {
+        this.setState({
+          lastUpdated: Date.now(),
+          status: ComponentStatus.DONE,
+        });
       });
+    });
   }
 
   render() {
