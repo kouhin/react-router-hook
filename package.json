@@ -57,7 +57,7 @@
   "dependencies": {
     "async": "^2.0.1",
     "debug": "^2.2.0",
-    "react-addons-shallow-compare": "^15.3.2",
+    "lodash": "^4.16.1",
     "react-addons-update": "^15.3.2"
   }
 }
