@@ -1,6 +1,5 @@
 import React from 'react';
 import update from 'react-addons-update';
-import Debug from 'debug';
 import setImmediate from 'async/setImmediate';
 import series from 'async/series';
 import asyncify from 'async/asyncify';
@@ -9,7 +8,6 @@ import mapSeries from 'async/mapSeries';
 import { ComponentStatus, routerHookPropName } from './constants';
 import getInitStatus from './getInitStatus';
 
-const debug = new Debug('react-router-hook:RouterHookContainer');
 const ABORT = 'abort';
 
 export default class RouterHookContainer extends React.Component {
@@ -96,7 +94,6 @@ export default class RouterHookContainer extends React.Component {
   }
 
   reloadComponent(shouldReportStatus = false) {
-    const start = Date.now();
     const {
       locals,
       routerDidEnterHooks,
@@ -214,12 +211,6 @@ export default class RouterHookContainer extends React.Component {
             status: ComponentStatus.DONE,
           }, callback);
         });
-      },
-      callback => {
-        if (debug.enabled) {
-          debug(`Reloading component... finished in ${Date.now() - start} ms`, (this.Component.displayName || this.Component)); // eslint-disable-line max-len
-          callback();
-        }
       },
     ], err => {
       if (err && err === ABORT) {
