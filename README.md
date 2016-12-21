@@ -3,7 +3,7 @@ react-router-hook
 
 Universal data fetching and lifecycle management for react router with multiple components. Inspired by [redial](https://github.com/markdalgleish/redial), [react-router-redial](https://github.com/dlmr/react-router-redial) and [async props](https://github.com/ryanflorence/async-props).
 
-[![build status](https://img.shields.io/travis/kouhin/react-router-hook.svg?style=flat-square)](https://travis-ci.org/kouhin/react-router-hook)
+[![CircleCI](https://circleci.com/gh/kouhin/react-router-hook.svg?style=svg)](https://circleci.com/gh/kouhin/react-router-hook)
 [![dependency status](https://david-dm.org/kouhin/react-router-hook.svg?style=flat-square)](https://david-dm.org/kouhin/react-router-hook)
 
 **NOTICE: react-router-hook is under heavy development and is not yet ready for production use.**
