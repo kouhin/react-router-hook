@@ -5,7 +5,6 @@ dependencies:
   override:
     - sudo apt-get install jq
     - npm install
-    - npm run build
 test:
   override:
     - npm test

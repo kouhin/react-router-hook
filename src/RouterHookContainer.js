@@ -12,7 +12,7 @@ const ABORT = 'abort';
 
 export default class RouterHookContainer extends React.Component {
   static propTypes = {
-    children: React.PropTypes.node,
+    children: React.PropTypes.node.isRequired,
     location: React.PropTypes.object.isRequired,
   }
 
@@ -27,7 +27,7 @@ export default class RouterHookContainer extends React.Component {
 
     const initStatus = getInitStatus(
       props.children.type,
-      context.routerHookContext.routerWillEnterHooks
+      context.routerHookContext.routerWillEnterHooks,
     );
     this.shouldReload = false;
     this.state = {
@@ -52,7 +52,7 @@ export default class RouterHookContainer extends React.Component {
       this.setState({
         status: getInitStatus(
             this.Component,
-            this.context.routerHookContext.routerWillEnterHooks
+            this.context.routerHookContext.routerWillEnterHooks,
         ),
         childProps: {},
       });
@@ -102,7 +102,7 @@ export default class RouterHookContainer extends React.Component {
 
     const initStatus = getInitStatus(
       this.Component,
-      this.context.routerHookContext.routerWillEnterHooks
+      this.context.routerHookContext.routerWillEnterHooks,
     );
 
     if (shouldReportStatus) {
@@ -123,7 +123,7 @@ export default class RouterHookContainer extends React.Component {
       ...restProps,
       ...locals,
       getProps: () => this.state.childProps,
-      setProps: p => {
+      setProps: (p) => {
         if (location === this.props.location) {
           setImmediate(() => {
             this.setState(update(this.state, {
@@ -140,7 +140,7 @@ export default class RouterHookContainer extends React.Component {
     };
 
     series([
-      callback => {
+      (callback) => {
         setImmediate(() => {
           if (location !== this.props.location) {
             callback(ABORT);
@@ -163,7 +163,7 @@ export default class RouterHookContainer extends React.Component {
           }, callback);
         });
       },
-      callback => {
+      (callback) => {
         setImmediate(() => {
           if (location !== this.props.location) {
             callback(ABORT);
@@ -178,7 +178,7 @@ export default class RouterHookContainer extends React.Component {
           }, callback);
         });
       },
-      callback => {
+      (callback) => {
         setImmediate(() => {
           if (location !== this.props.location) {
             callback(ABORT);
@@ -197,7 +197,7 @@ export default class RouterHookContainer extends React.Component {
           }, callback);
         });
       },
-      callback => {
+      (callback) => {
         setImmediate(() => {
           if (location !== this.props.location) {
             callback(ABORT);
@@ -212,7 +212,7 @@ export default class RouterHookContainer extends React.Component {
           }, callback);
         });
       },
-    ], err => {
+    ], (err) => {
       if (err && err === ABORT) {
         return;
       }

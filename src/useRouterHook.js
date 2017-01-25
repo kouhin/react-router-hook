@@ -22,6 +22,9 @@ export default function useRouterHook(options) {
       return React.cloneElement(context, opts, child);
     },
     renderRouteComponent: (child, renderProps) => {
+      if (!child) {
+        return null;
+      }
       if (!container) {
         container = (
           <RouterHookContainer {...renderProps}>

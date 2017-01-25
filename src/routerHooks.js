@@ -1,7 +1,9 @@
 import { routerHookPropName } from './constants';
 
-const routerHooks = hooks => Component => {
-  Component[routerHookPropName] = hooks; // eslint-disable-line no-param-reassign
+const routerHooks = hooks => (Component) => {
+  // eslint-disable-next-line no-param-reassign
+  Component[routerHookPropName] = hooks;
+  return Component;
 };
 
 export default routerHooks;
