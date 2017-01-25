@@ -7,10 +7,9 @@ import getAllComponents from './getAllComponents';
 export default class RouterHookContext extends React.Component {
   static propTypes = {
     children: React.PropTypes.node.isRequired,
-    components: React.PropTypes.array.isRequired,
+    components: React.PropTypes.arrayOf(React.PropTypes.node).isRequired,
     locals: React.PropTypes.object,
     location: React.PropTypes.object.isRequired,
-    params: React.PropTypes.object,
     routerDidEnterHooks: React.PropTypes.array,
     routerWillEnterHooks: React.PropTypes.array,
     onAborted: React.PropTypes.func,
@@ -91,7 +90,7 @@ export default class RouterHookContext extends React.Component {
   updateRouterLoading() {
     const loading = (() => {
       const components = getAllComponents(this.props.components);
-      for (let i = 0, length = components.length; i < length; i++) {
+      for (let i = 0, length = components.length; i < length; i += 1) {
         const status = this.componentStatuses.get(components[i]);
         if (status && status !== ComponentStatus.DONE) {
           return true;
