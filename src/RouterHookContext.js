@@ -16,7 +16,7 @@ const noop = () => null;
 export default class RouterHookContext extends React.Component {
   static propTypes = {
     children: React.PropTypes.node.isRequired,
-    components: componentsShape.isRequired,
+    components: React.PropTypes.arrayOf(componentsShape).isRequired,
     location: locationShape.isRequired,
     onAborted: React.PropTypes.func.isRequired,
     onCompleted: React.PropTypes.func.isRequired,
@@ -56,7 +56,6 @@ export default class RouterHookContext extends React.Component {
     if (nextProps.location === this.props.location) {
       return;
     }
-    this.componentStatuses = {};
     if (this.loading) {
       this.props.onAborted();
     }
