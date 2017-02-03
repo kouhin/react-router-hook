@@ -167,3 +167,56 @@ app.get('*', (req, res) => {
 });
 triggerHooksOnServer
 ```
+
+## Monitoring router status
+
+``` javascript
+
+@routerHook({
+  fetch: async () => {
+    await fetchData();
+  },
+  defer: async () => {
+    await fetchDeferredData();
+  },
+})
+class SomeComponent extends React.Component{
+
+  static contextTypes = {
+    routerHookContext: routerHookContextShape,
+  };
+
+  constructor(props, context) {
+    super(props, context);
+    this.state = {
+      routerLoading: false,
+    };
+  }
+
+  componentWillMount() {
+    if (this.context.routerHookContext) {
+      this.removeListener = this.context.routerHookContext.addLoadingListener((loading, info) => {
+        const { total, init, defer, done } = info;
+        console.info(loading, total, init, defer, done);
+        this.setState({
+          routerLoading: loading,
+        });
+      });
+    }
+  }
+
+  componentWillUnmount() {
+    if (this.removeListener) {
+      this.removeListener();
+    }
+  }
+
+  render() {
+    return (
+      <div>
+        is loading: {this.state.routerLoading}
+      </div>
+    );
+  }
+}
+```

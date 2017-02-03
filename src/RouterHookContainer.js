@@ -5,7 +5,7 @@ import mapSeries from 'async/mapSeries';
 
 import { ComponentStatus, routerHookPropName } from './constants';
 import getInitStatus from './getInitStatus';
-import { renderPropsShape } from './PropTypes';
+import { renderPropsShape, routerHookContextShape } from './PropTypes';
 
 const ABORT = 'abort';
 
@@ -19,7 +19,7 @@ export default class RouterHookContainer extends React.Component {
   }
 
   static contextTypes = {
-    routerHookContext: React.PropTypes.object.isRequired,
+    routerHookContext: routerHookContextShape,
   };
 
   constructor(props, context) {
@@ -229,7 +229,6 @@ export default class RouterHookContainer extends React.Component {
       ...this.childProps,
       componentStatus: status,
       reloadComponent: this.reloadComponent,
-      routerLoading: this.context.routerHookContext.routerLoading,
     };
 
     if (status === ComponentStatus.INIT) {
