@@ -34,3 +34,9 @@ export const renderPropsShape = shape({
   components: componentsShape,
   router: routerShape,
 });
+
+export const routerHookContextShape = shape({
+  getComponentStatus: func,
+  setComponentStatus: func,
+  addLoadingListener: func,
+});
