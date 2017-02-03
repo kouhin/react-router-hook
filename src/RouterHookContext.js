@@ -1,34 +1,19 @@
 import React from 'react';
-import setImmediate from 'async/setImmediate';
 import throttle from 'lodash/throttle';
 import { ComponentStatus } from './constants';
 import getAllComponents from './getAllComponents';
+import { componentsShape, locationShape } from './PropTypes';
 
 export default class RouterHookContext extends React.Component {
   static propTypes = {
     children: React.PropTypes.node.isRequired,
-    components: React.PropTypes.arrayOf(React.PropTypes.node).isRequired,
-    locals: React.PropTypes.object,
-    location: React.PropTypes.object.isRequired,
-    routerDidEnterHooks: React.PropTypes.array,
-    routerWillEnterHooks: React.PropTypes.array,
-    onAborted: React.PropTypes.func,
-    onCompleted: React.PropTypes.func,
-    onError: React.PropTypes.func,
-    onStarted: React.PropTypes.func,
+    components: componentsShape.isRequired,
+    location: locationShape.isRequired,
+    onAborted: React.PropTypes.func.isRequired,
+    onCompleted: React.PropTypes.func.isRequired,
+    onError: React.PropTypes.func.isRequired,
+    onStarted: React.PropTypes.func.isRequired,
   };
-
-  static get defaultProps() {
-    return {
-      locals: {},
-      routerDidEnterHooks: [],
-      routerWillEnterHooks: [],
-      onAborted: () => {},
-      onCompleted: () => {},
-      onError: () => {},
-      onStarted: () => {},
-    };
-  }
 
   static childContextTypes = {
     routerHookContext: React.PropTypes.object,
@@ -49,12 +34,8 @@ export default class RouterHookContext extends React.Component {
   getChildContext() {
     return {
       routerHookContext: {
-        components: this.props.components,
         getComponentStatus: this.getComponentStatus,
         routerLoading: this.state.routerLoading,
-        locals: this.props.locals,
-        routerDidEnterHooks: this.props.routerDidEnterHooks,
-        routerWillEnterHooks: this.props.routerWillEnterHooks,
         setComponentStatus: this.setComponentStatus,
       },
     };
@@ -74,7 +55,7 @@ export default class RouterHookContext extends React.Component {
   }
 
   setComponentStatus(Component, status, err) {
-    setImmediate(() => {
+    setTimeout(() => {
       this.componentStatuses.set(Component, status);
       this.updateRouterLoading();
       if (err) {
@@ -103,10 +84,8 @@ export default class RouterHookContext extends React.Component {
       if (!loading) {
         this.props.onCompleted();
       }
-      setImmediate(() => {
-        this.setState({
-          routerLoading: this.loading,
-        });
+      this.setState({
+        routerLoading: this.loading,
       });
     }
   }

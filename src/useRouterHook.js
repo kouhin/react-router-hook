@@ -2,24 +2,37 @@ import React from 'react';
 import RouterHookContext from './RouterHookContext';
 import RouterHookContainer from './RouterHookContainer';
 
+function noop() {}
+
 export default function useRouterHook(options) {
-  let context = null;
   let container = null;
+  const {
+    locals = {},
+    onAborted = noop,
+    onCompleted = noop,
+    onError = noop,
+    onStarted = noop,
+    routerDidEnterHooks = [],
+    routerWillEnterHooks = [],
+  } = options;
   return {
     renderRouterContext: (child, renderProps) => {
-      const opts = {
-        ...renderProps,
-        ...options,
-      };
-      if (!context) {
-        context = (
-          <RouterHookContext {...opts}>
-            {child}
-          </RouterHookContext>
-        );
-        return context;
-      }
-      return React.cloneElement(context, opts, child);
+      const {
+        components,
+        location,
+      } = renderProps;
+      return (
+        <RouterHookContext
+          components={components}
+          location={location}
+          onAborted={onAborted}
+          onCompleted={onCompleted}
+          onError={onError}
+          onStarted={onStarted}
+        >
+          {child}
+        </RouterHookContext>
+      );
     },
     renderRouteComponent: (child, renderProps) => {
       if (!child) {
@@ -27,13 +40,23 @@ export default function useRouterHook(options) {
       }
       if (!container) {
         container = (
-          <RouterHookContainer {...renderProps}>
+          <RouterHookContainer
+            locals={locals}
+            renderProps={renderProps}
+            routerDidEnterHooks={routerDidEnterHooks}
+            routerWillEnterHooks={routerWillEnterHooks}
+          >
             {child}
           </RouterHookContainer>
         );
         return container;
       }
-      return React.cloneElement(container, renderProps, child);
+      return React.cloneElement(container, {
+        locals,
+        renderProps,
+        routerDidEnterHooks,
+        routerWillEnterHooks,
+      }, child);
     },
   };
 }

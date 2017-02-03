@@ -10,6 +10,10 @@
     "lint": "eslint src",
     "test": "eslint src"
   },
+  "files": [
+    "lib",
+    "src"
+  ],
   "repository": {
     "type": "git",
     "url": "https://github.com/kouhin/react-router-hook.git"
@@ -43,7 +47,6 @@
   },
   "dependencies": {
     "async": "^2.1.4",
-    "lodash": "^4.17.4",
-    "react-addons-update": "^15.4.2"
+    "lodash": "^4.17.4"
   }
 }
