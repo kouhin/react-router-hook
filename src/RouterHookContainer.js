@@ -1,19 +1,21 @@
 import React from 'react';
-import update from 'react-addons-update';
-import setImmediate from 'async/setImmediate';
 import series from 'async/series';
 import asyncify from 'async/asyncify';
 import mapSeries from 'async/mapSeries';
 
 import { ComponentStatus, routerHookPropName } from './constants';
 import getInitStatus from './getInitStatus';
+import { renderPropsShape } from './PropTypes';
 
 const ABORT = 'abort';
 
 export default class RouterHookContainer extends React.Component {
   static propTypes = {
     children: React.PropTypes.node.isRequired,
-    location: React.PropTypes.object.isRequired,
+    locals: React.PropTypes.object.isRequired,
+    renderProps: renderPropsShape.isRequired,
+    routerDidEnterHooks: React.PropTypes.arrayOf(React.PropTypes.string).isRequired,
+    routerWillEnterHooks: React.PropTypes.arrayOf(React.PropTypes.string).isRequired,
   }
 
   static contextTypes = {
@@ -22,63 +24,76 @@ export default class RouterHookContainer extends React.Component {
 
   constructor(props, context) {
     super(props, context);
-    this.reportStatus = this.reportStatus.bind(this);
+    this.setStatus = this.setStatus.bind(this);
     this.reloadComponent = this.reloadComponent.bind(this);
+    this.mounted = false;
 
     const initStatus = getInitStatus(
       props.children.type,
-      context.routerHookContext.routerWillEnterHooks,
+      this.props.routerWillEnterHooks,
     );
     this.shouldReload = false;
-    this.state = {
-      status: initStatus,
-      childProps: {},
-      lastUpdated: Date.now(),
-    };
+    this.status = initStatus;
+    this.childProps = {};
   }
 
   componentWillMount() {
-    this.reportStatus(this.state.status);
+    this.context.routerHookContext.setComponentStatus(this.Component, this.status);
   }
 
   componentDidMount() {
-    setImmediate(() => {
+    this.mounted = true;
+    setTimeout(() => {
       this.reloadComponent(true);
     });
   }
 
   componentWillReceiveProps(nextProps) {
-    if (this.props.location !== nextProps.location) {
-      this.setState({
-        status: getInitStatus(
-            this.Component,
-            this.context.routerHookContext.routerWillEnterHooks,
-        ),
-        childProps: {},
-      });
-      setImmediate(() => {
-        this.shouldReload = true;
-        this.setState({
-          lastUpdated: Date.now(),
-        });
-      });
-    } else {
-      this.setState({
-        lastUpdated: Date.now(),
-      });
+    if (this.props.renderProps.location !== nextProps.renderProps.location) {
+      this.status = getInitStatus(
+        this.Component,
+        this.props.routerWillEnterHooks,
+      );
+      this.childProps = {};
+      this.shouldReload = true;
+      if (this.mounted) {
+        this.forceUpdate();
+      }
+      return;
+    }
+
+    if (this.mounted) {
+      this.forceUpdate();
     }
   }
 
-  shouldComponentUpdate(nextProps, nextState) {
-    return this.state.lastUpdated !== nextState.lastUpdated;
+  shouldComponentUpdate() {
+    return false;
   }
 
   componentDidUpdate() {
     if (this.shouldReload) {
       this.shouldReload = false;
-      setImmediate(() => {
+      setTimeout(() => {
         this.reloadComponent(true);
       });
+    }
+  }
+
+  componentWillUnmount() {
+    this.mounted = false;
+  }
+
+  setStatus(status, shouldReport, err) {
+    const shouldUpdate = this.status !== status;
+    this.status = status;
+    if (shouldReport) {
+      this.context.routerHookContext.setComponentStatus(this.Component, status, err);
+    }
+    if (shouldUpdate) {
+      if (this.mounted) {
+        this.forceUpdate();
+      }
     }
   }
 
@@ -86,155 +101,132 @@ export default class RouterHookContainer extends React.Component {
     return this.props.children.type;
   }
 
-  reportStatus(status, err) {
-    if (!status) {
-      throw new Error('Status is undefined', this.Component.displayName, status);
-    }
-    this.context.routerHookContext.setComponentStatus(this.Component, status, err);
-  }
-
   reloadComponent(shouldReportStatus = false) {
+    const routerHooks = this.Component[routerHookPropName];
+    if (!routerHooks) {
+      return;
+    }
+    /* eslint-disable no-unused-vars */
     const {
+      children,
       locals,
+      renderProps,
       routerDidEnterHooks,
       routerWillEnterHooks,
-    } = this.context.routerHookContext;
+    } = this.props;
+    /* eslint-enable no-unused-vars */
 
     const initStatus = getInitStatus(
       this.Component,
-      this.context.routerHookContext.routerWillEnterHooks,
+      routerWillEnterHooks,
     );
 
-    if (shouldReportStatus) {
-      this.reportStatus(initStatus);
-    }
-
+    this.setStatus(initStatus, shouldReportStatus);
     if (initStatus === ComponentStatus.DONE) {
       return;
     }
 
-    const routerHooks = this.Component[routerHookPropName];
-
-    // eslint-disable-next-line no-unused-vars
-    const { children, ...restProps } = this.props;
-    const location = this.props.location;
+    const location = renderProps.location;
 
     const args = {
-      ...restProps,
+      ...renderProps,
       ...locals,
-      getProps: () => this.state.childProps,
+      getProps: () => this.childProps,
       setProps: (p) => {
-        if (location === this.props.location) {
-          setImmediate(() => {
-            this.setState(update(this.state, {
-              lastUpdated: {
-                $set: Date.now(),
-              },
-              childProps: {
-                $merge: p,
-              },
-            }));
-          });
+        if (location === renderProps.location) {
+          this.childProps = {
+            ...this.childProps,
+            ...p,
+          };
+          if (this.mounted) {
+            this.forceUpdate();
+          }
         }
       },
     };
 
     series([
       (callback) => {
-        setImmediate(() => {
-          if (location !== this.props.location) {
-            callback(ABORT);
-            return;
-          }
-          if (initStatus === 'init') {
-            callback();
-            return;
-          }
-          const willEnterHooks = routerWillEnterHooks
-            .map(key => routerHooks[key])
-            .filter(f => f)
-            .map(f => asyncify(f));
+        if (location !== renderProps.location) {
+          callback(ABORT);
+          return;
+        }
+        if (initStatus === 'init') {
+          callback();
+          return;
+        }
+        const willEnterHooks = routerWillEnterHooks
+              .map(key => routerHooks[key])
+              .filter(f => f)
+              .map(f => asyncify(f));
+        if (willEnterHooks.length > 0) {
           mapSeries(willEnterHooks, (hook, cb) => {
-            if (location === this.props.location) {
-              setImmediate(() => {
-                hook(args, cb);
-              });
+            if (location === renderProps.location) {
+              hook(args, cb);
             }
           }, callback);
-        });
+        } else {
+          callback();
+        }
       },
       (callback) => {
-        setImmediate(() => {
-          if (location !== this.props.location) {
-            callback(ABORT);
-            return;
-          }
-          if (shouldReportStatus) {
-            this.reportStatus(ComponentStatus.DEFER);
-          }
-          this.setState({
-            lastUpdated: Date.now(),
-            status: ComponentStatus.DEFER,
-          }, callback);
-        });
+        if (location !== renderProps.location) {
+          callback(ABORT);
+          return;
+        }
+        this.setStatus(ComponentStatus.DEFER, shouldReportStatus);
+        callback();
       },
       (callback) => {
-        setImmediate(() => {
-          if (location !== this.props.location) {
-            callback(ABORT);
-            return;
-          }
-          const didEnterHooks = routerDidEnterHooks
-            .map(key => routerHooks[key])
-            .filter(f => f)
-            .map(f => asyncify(f));
+        if (location !== renderProps.location) {
+          callback(ABORT);
+          return;
+        }
+        const didEnterHooks = routerDidEnterHooks
+          .map(key => routerHooks[key])
+          .filter(f => f)
+              .map(f => asyncify(f));
+        if (didEnterHooks.length > 0) {
           mapSeries(didEnterHooks, (hook, cb) => {
-            if (location === this.props.location) {
-              setImmediate(() => {
-                hook(args, cb);
-              });
+            if (location === renderProps.location) {
+              hook(args, cb);
             }
           }, callback);
-        });
+        } else {
+          callback();
+        }
       },
       (callback) => {
-        setImmediate(() => {
-          if (location !== this.props.location) {
-            callback(ABORT);
-            return;
-          }
-          if (shouldReportStatus) {
-            this.reportStatus(ComponentStatus.DONE);
-          }
-          this.setState({
-            lastUpdated: Date.now(),
-            status: ComponentStatus.DONE,
-          }, callback);
-        });
+        if (location !== renderProps.location) {
+          callback(ABORT);
+          return;
+        }
+        this.setStatus(ComponentStatus.DONE, shouldReportStatus);
+        callback();
       },
     ], (err) => {
       if (err && err === ABORT) {
         return;
       }
-      if (shouldReportStatus) {
-        this.reportStatus(ComponentStatus.DONE, err);
-      }
-      setImmediate(() => {
-        this.setState({
-          lastUpdated: Date.now(),
-          status: ComponentStatus.DONE,
-        });
-      });
+      this.setStatus(ComponentStatus.DONE, shouldReportStatus, err);
     });
   }
 
   render() {
-    const status = this.state.status;
-    // eslint-disable-next-line no-unused-vars
-    const { children, ...restProps } = this.props;
+    const status = this.status;
+    /* eslint-disable no-unused-vars */
+    const {
+      children,
+      locals,
+      renderProps,
+      routerDidEnterHooks,
+      routerWillEnterHooks,
+      ...restProps
+    } = this.props;
+    /* eslint-enable no-unused-vars */
     const passProps = {
       ...restProps,
-      ...this.state.childProps,
+      ...this.childProps,
       componentStatus: status,
       reloadComponent: this.reloadComponent,
       routerLoading: this.context.routerHookContext.routerLoading,
