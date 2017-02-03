@@ -1,62 +1,49 @@
 import React from 'react';
-import setImmediate from 'async/setImmediate';
 import throttle from 'lodash/throttle';
-import { ComponentStatus } from './constants';
+import EventEmitter from 'eventemitter3';
+import { ComponentStatus, routerHookPropName } from './constants';
 import getAllComponents from './getAllComponents';
+import { componentsShape, locationShape, routerHookContextShape } from './PropTypes';
+
+const CHANGE_LOADING_STATE = 'changeLoadingState';
+const canUseDOM = !!(
+  typeof window !== 'undefined' &&
+    window.document &&
+    window.document.createElement
+);
+const noop = () => null;
 
 export default class RouterHookContext extends React.Component {
   static propTypes = {
     children: React.PropTypes.node.isRequired,
-    components: React.PropTypes.array.isRequired,
-    locals: React.PropTypes.object,
-    location: React.PropTypes.object.isRequired,
-    params: React.PropTypes.object,
-    routerDidEnterHooks: React.PropTypes.array,
-    routerWillEnterHooks: React.PropTypes.array,
-    onAborted: React.PropTypes.func,
-    onCompleted: React.PropTypes.func,
-    onError: React.PropTypes.func,
-    onStarted: React.PropTypes.func,
+    components: componentsShape.isRequired,
+    location: locationShape.isRequired,
+    onAborted: React.PropTypes.func.isRequired,
+    onCompleted: React.PropTypes.func.isRequired,
+    onError: React.PropTypes.func.isRequired,
+    onStarted: React.PropTypes.func.isRequired,
   };
 
-  static get defaultProps() {
-    return {
-      locals: {},
-      routerDidEnterHooks: [],
-      routerWillEnterHooks: [],
-      onAborted: () => {},
-      onCompleted: () => {},
-      onError: () => {},
-      onStarted: () => {},
-    };
-  }
-
   static childContextTypes = {
-    routerHookContext: React.PropTypes.object,
+    routerHookContext: routerHookContextShape,
   };
 
   constructor(props) {
     super(props);
-    this.componentStatuses = new WeakMap();
+    this.componentStatuses = {};
     this.setComponentStatus = this.setComponentStatus.bind(this);
     this.getComponentStatus = this.getComponentStatus.bind(this);
+    this.addLoadingListener = this.addLoadingListener.bind(this);
     this.updateRouterLoading = throttle(this.updateRouterLoading, 100).bind(this);
     this.loading = false;
-    this.state = {
-      routerLoading: this.loading,
-    };
   }
 
   getChildContext() {
     return {
       routerHookContext: {
-        components: this.props.components,
         getComponentStatus: this.getComponentStatus,
-        routerLoading: this.state.routerLoading,
-        locals: this.props.locals,
-        routerDidEnterHooks: this.props.routerDidEnterHooks,
-        routerWillEnterHooks: this.props.routerWillEnterHooks,
         setComponentStatus: this.setComponentStatus,
+        addLoadingListener: this.addLoadingListener,
       },
     };
   }
@@ -69,46 +56,94 @@ export default class RouterHookContext extends React.Component {
     if (nextProps.location === this.props.location) {
       return;
     }
+    this.componentStatuses = {};
     if (this.loading) {
       this.props.onAborted();
     }
   }
 
+  componentWillUnmount() {
+    if (!this.routerEventEmitter) {
+      this.routerEventEmitter.removeAllListeners(CHANGE_LOADING_STATE);
+      this.routerEventEmitter = null;
+    }
+  }
+
   setComponentStatus(Component, status, err) {
-    setImmediate(() => {
-      this.componentStatuses.set(Component, status);
-      this.updateRouterLoading();
-      if (err) {
-        this.props.onError({ Component, error: err });
-      }
-    });
+    const routerHooks = Component[routerHookPropName];
+    if (!routerHooks) {
+      return;
+    }
+    this.componentStatuses[routerHooks.id] = status;
+    this.updateRouterLoading();
+    if (err) {
+      this.props.onError({ Component, error: err });
+      this.componentStatuses[routerHooks.id] = ComponentStatus.DONE;
+    }
   }
 
   getComponentStatus(Component) {
-    return this.componentStatuses.get(Component);
+    const routerHooks = Component[routerHookPropName];
+    if (!routerHooks) {
+      return null;
+    }
+    return this.componentStatuses[routerHooks.id];
+  }
+
+  addLoadingListener(listener) {
+    if (!canUseDOM) {
+      return noop;
+    }
+    if (!this.routerEventEmitter) {
+      this.routerEventEmitter = new EventEmitter();
+    }
+    this.routerEventEmitter.on(CHANGE_LOADING_STATE, listener);
+    return () => {
+      this.routerEventEmitter.removeListener(CHANGE_LOADING_STATE, listener);
+    };
   }
 
   updateRouterLoading() {
-    const loading = (() => {
-      const components = getAllComponents(this.props.components);
-      for (let i = 0, length = components.length; i < length; i++) {
-        const status = this.componentStatuses.get(components[i]);
-        if (status && status !== ComponentStatus.DONE) {
-          return true;
-        }
+    const components = getAllComponents(this.props.components);
+    let total = 0;
+    let init = 0;
+    let defer = 0;
+    let done = 0;
+    for (let i = 0, length = components.length; i < length; i += 1) {
+      const hookId = components[i][routerHookPropName].id;
+      total += 1;
+      const status = this.componentStatuses[hookId];
+      switch (status) {
+        case ComponentStatus.INIT:
+          init += 1;
+          break;
+        case ComponentStatus.DEFER:
+          defer += 1;
+          break;
+        case ComponentStatus.DONE:
+          done += 1;
+          break;
+        default:
+          init += 1;
       }
-      return false;
-    })();
+    }
+
+    const loading = done !== total;
+    if (this.routerEventEmitter) {
+      this.routerEventEmitter.emit(CHANGE_LOADING_STATE, loading, {
+        total,
+        init,
+        defer,
+        done,
+      });
+    }
     if (this.loading !== loading) {
       this.loading = loading;
       if (!loading) {
         this.props.onCompleted();
+      } else {
+        this.props.onStarted();
       }
-      setImmediate(() => {
-        this.setState({
-          routerLoading: this.loading,
-        });
-      });
     }
   }
 

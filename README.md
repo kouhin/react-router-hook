@@ -112,3 +112,111 @@ class UserFooter extends React.Component {
   }
 }
 ```
+
+## On server side
+
+``` javascript
+
+import { match } from 'react-router';
+import { triggerHooksOnServer } from 'react-router-hook';
+// Other imports
+
+import routes from './routes';
+
+app.get('*', (req, res) => {
+  // create redux store (Optional);
+  const store = createStore();
+
+  match({
+    history,
+    routes,
+    location: req.url,
+  }, (err, redirectLocation, renderProps) => {
+    if (err) {
+      // Error Handler
+    }
+    const locals = {
+      dispatch: store.dispatch,
+      getState: store.getState,
+    };
+    triggerHooksOnServer(
+      renderProps,
+      ['fetch', 'defer'],
+      {
+        dispatch,
+        getState,
+      },
+      // If onComponentError is null, callback will be immediately called with the error
+      onComponentError: (err) => {
+        console.error(err.Component, err.error);
+      },
+      // triggerHooksOnServer() will return a Promise if there is no callback
+      (err) => {
+        if (err) {
+          res.status(500).end();
+          return;
+        }
+        const body = ReactDOMServer.renderToString(
+          <Provider store={store}>
+            <RouterContext {...renderProps} />
+          </Provider>,
+        );
+        res.send(`<html><head></head><body>${body}</body>`);
+      },
+  });
+});
+triggerHooksOnServer
+```
+
+## Monitoring router status
+
+``` javascript
+
+@routerHook({
+  fetch: async () => {
+    await fetchData();
+  },
+  defer: async () => {
+    await fetchDeferredData();
+  },
+})
+class SomeComponent extends React.Component{
+
+  static contextTypes = {
+    routerHookContext: routerHookContextShape,
+  };
+
+  constructor(props, context) {
+    super(props, context);
+    this.state = {
+      routerLoading: false,
+    };
+  }
+
+  componentWillMount() {
+    if (this.context.routerHookContext) {
+      this.removeListener = this.context.routerHookContext.addLoadingListener((loading, info) => {
+        const { total, init, defer, done } = info;
+        console.info(loading, total, init, defer, done);
+        this.setState({
+          routerLoading: loading,
+        });
+      });
+    }
+  }
+
+  componentWillUnmount() {
+    if (this.removeListener) {
+      this.removeListener();
+    }
+  }
+
+  render() {
+    return (
+      <div>
+        is loading: {this.state.routerLoading}
+      </div>
+    );
+  }
+}
+```

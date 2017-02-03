@@ -12,13 +12,7 @@
     "import",
     "babel"
   ],
-  "globals": {
-    "webpackIsomorphicTools": true,
-    "__SERVER__": true,
-    "__DEVTOOLS__": true
-  },
   "rules": {
-    "no-console": 0,
     "operator-linebreak": [
       2,
       "after",
@@ -34,6 +28,7 @@
       "always"
     ],
     "react/prefer-stateless-function": 0,
+    "react/forbid-prop-types": 0,
     "react/jsx-handler-names": [
       2,
       {
@@ -65,10 +60,6 @@
     "babel/object-curly-spacing": [
       2,
       "always"
-    ],
-    "babel/arrow-parens": [
-      2,
-      "as-needed"
     ],
     "babel/no-await-in-loop": 2,
     "import/no-extraneous-dependencies": 0,
