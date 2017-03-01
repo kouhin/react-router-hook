@@ -28,17 +28,18 @@ export default class RouterHookContainer extends React.Component {
     this.reloadComponent = this.reloadComponent.bind(this);
     this.mounted = false;
 
-    const initStatus = getInitStatus(
-      props.children.type,
-      this.props.routerWillEnterHooks,
-    );
     this.shouldReload = false;
-    this.status = initStatus;
-    this.childProps = {};
+    this.state = {
+      status: getInitStatus(
+        props.children.type,
+        this.props.routerWillEnterHooks,
+      ),
+      childProps: {},
+    };
   }
 
   componentWillMount() {
-    this.context.routerHookContext.setComponentStatus(this.Component, this.status);
+    this.context.routerHookContext.setComponentStatus(this.Component, this.state.status);
   }
 
   componentDidMount() {
@@ -50,11 +51,13 @@ export default class RouterHookContainer extends React.Component {
 
   componentWillReceiveProps(nextProps) {
     if (this.props.renderProps.location !== nextProps.renderProps.location) {
-      this.status = getInitStatus(
-        this.Component,
-        this.props.routerWillEnterHooks,
-      );
-      this.childProps = {};
+      this.setState({
+        status: getInitStatus(
+          this.Component,
+          this.props.routerWillEnterHooks,
+        ),
+        childProps: {},
+      });
       this.shouldReload = true;
       if (this.mounted) {
         this.forceUpdate();
@@ -65,10 +68,6 @@ export default class RouterHookContainer extends React.Component {
     if (this.mounted) {
       this.forceUpdate();
     }
-  }
-
-  shouldComponentUpdate() {
-    return false;
   }
 
   componentDidUpdate() {
@@ -85,8 +84,10 @@ export default class RouterHookContainer extends React.Component {
   }
 
   setStatus(status, shouldReport, err) {
-    const shouldUpdate = this.status !== status;
-    this.status = status;
+    const shouldUpdate = this.state.status !== status;
+    this.setState({
+      status,
+    });
     if (shouldReport) {
       this.context.routerHookContext.setComponentStatus(this.Component, status, err);
     }
@@ -131,13 +132,15 @@ export default class RouterHookContainer extends React.Component {
     const args = {
       ...renderProps,
       ...locals,
-      getProps: () => this.childProps,
+      getProps: () => this.state.childProps,
       setProps: (p) => {
         if (location === renderProps.location) {
-          this.childProps = {
-            ...this.childProps,
-            ...p,
-          };
+          this.setState({
+            childProps: {
+              ...this.state.childProps,
+              ...p,
+            },
+          });
           if (this.mounted) {
             this.forceUpdate();
           }
@@ -213,7 +216,6 @@ export default class RouterHookContainer extends React.Component {
   }
 
   render() {
-    const status = this.status;
     /* eslint-disable no-unused-vars */
     const {
       children,
@@ -226,19 +228,19 @@ export default class RouterHookContainer extends React.Component {
     /* eslint-enable no-unused-vars */
     const passProps = {
       ...restProps,
-      ...this.childProps,
-      componentStatus: status,
+      ...this.state.childProps,
+      componentStatus: this.state.status,
       reloadComponent: this.reloadComponent,
     };
 
-    if (status === ComponentStatus.INIT) {
+    if (this.state.status === ComponentStatus.INIT) {
       if (!this.prevChildren) {
         return null;
       }
       return React.cloneElement(this.prevChildren, passProps);
     }
 
-    this.prevChildren = React.cloneElement(this.props.children, passProps);
+    this.prevChildren = React.cloneElement(children, passProps);
     return this.prevChildren;
   }
 }

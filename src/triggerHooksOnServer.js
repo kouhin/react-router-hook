@@ -1,6 +1,3 @@
-import map from 'async/map';
-import eachSeries from 'async/eachSeries';
-import asyncify from 'async/asyncify';
 import getAllComponents from './getAllComponents';
 import { routerHookPropName } from './constants';
 
@@ -18,46 +15,26 @@ export default function triggerHooksOnServer(
     ...locals,
   };
 
-  const components = getAllComponents(renderProps.components);
-
-  const run = (asyncCallback) => {
-    map(components, (component, cb) => {
-      const routerHooks = component[routerHookPropName];
-      if (!routerHooks) {
-        cb();
-        return;
-      }
-      const runHooks = hooks.map(key => routerHooks[key]).filter(f => f);
-      if (runHooks.length < 1) {
-        cb();
-        return;
-      }
-      eachSeries(runHooks, (hook, hookCb) => {
-        asyncify(hook)(args, hookCb);
-      }, (err) => {
-        if (err && onComponentError) {
-          onComponentError({ Component: component, error: err });
-          cb();
-          return;
-        }
-        cb(err);
-      });
-    }, (err) => {
-      asyncCallback(err);
-    });
-  };
+  const promises = getAllComponents(renderProps.components)
+        .map((component) => {
+          const routerHooks = component[routerHookPropName];
+          if (!routerHooks) return null;
+          const runHooks = hooks.map(key => routerHooks[key]).filter(f => f);
+          if (runHooks.length < 1) return null;
+          return runHooks.reduce(
+            (total, current) => total.then(() => current(args))
+            , Promise.resolve())
+            .catch(err => onComponentError({ Component: component, error: err }));
+        })
+        .filter(p => p);
 
   if (callback) {
-    run(callback);
+    Promise.all(promises)
+      .then(() => {
+        callback();
+      })
+      .catch(callback);
     return null;
   }
-  return new Promise((resolve, reject) => {
-    run((err) => {
-      if (err) {
-        reject(err);
-        return;
-      }
-      resolve();
-    });
-  });
+  return Promise.all(promises);
 }
