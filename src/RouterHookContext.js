@@ -1,5 +1,4 @@
 import React from 'react';
-import throttle from 'lodash/throttle';
 import EventEmitter from 'eventemitter3';
 import { ComponentStatus, routerHookPropName } from './constants';
 import getAllComponents from './getAllComponents';
@@ -16,7 +15,7 @@ const noop = () => null;
 export default class RouterHookContext extends React.Component {
   static propTypes = {
     children: React.PropTypes.node.isRequired,
-    components: componentsShape.isRequired,
+    components: React.PropTypes.arrayOf(componentsShape).isRequired,
     location: locationShape.isRequired,
     onAborted: React.PropTypes.func.isRequired,
     onCompleted: React.PropTypes.func.isRequired,
@@ -34,7 +33,7 @@ export default class RouterHookContext extends React.Component {
     this.setComponentStatus = this.setComponentStatus.bind(this);
     this.getComponentStatus = this.getComponentStatus.bind(this);
     this.addLoadingListener = this.addLoadingListener.bind(this);
-    this.updateRouterLoading = throttle(this.updateRouterLoading, 100).bind(this);
+    this.updateRouterLoading = this.updateRouterLoading.bind(this);
     this.loading = false;
   }
 
@@ -56,14 +55,13 @@ export default class RouterHookContext extends React.Component {
     if (nextProps.location === this.props.location) {
       return;
     }
-    this.componentStatuses = {};
     if (this.loading) {
       this.props.onAborted();
     }
   }
 
   componentWillUnmount() {
-    if (!this.routerEventEmitter) {
+    if (this.routerEventEmitter) {
       this.routerEventEmitter.removeAllListeners(CHANGE_LOADING_STATE);
       this.routerEventEmitter = null;
     }
@@ -104,6 +102,9 @@ export default class RouterHookContext extends React.Component {
   }
 
   updateRouterLoading() {
+    if (!canUseDOM) {
+      return;
+    }
     const components = getAllComponents(this.props.components);
     let total = 0;
     let init = 0;
