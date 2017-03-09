@@ -34,7 +34,6 @@ export default class RouterHookContainer extends React.Component {
         props.children.type,
         this.props.routerWillEnterHooks,
       ),
-      childProps: {},
     };
   }
 
@@ -44,7 +43,7 @@ export default class RouterHookContainer extends React.Component {
 
   componentDidMount() {
     this.mounted = true;
-    setTimeout(() => {
+    setImmediate(() => {
       this.reloadComponent(true);
     });
   }
@@ -56,7 +55,6 @@ export default class RouterHookContainer extends React.Component {
           this.Component,
           this.props.routerWillEnterHooks,
         ),
-        childProps: {},
       });
       this.shouldReload = true;
       if (this.mounted) {
@@ -132,20 +130,6 @@ export default class RouterHookContainer extends React.Component {
     const args = {
       ...renderProps,
       ...locals,
-      getProps: () => this.state.childProps,
-      setProps: (p) => {
-        if (location === renderProps.location) {
-          this.setState({
-            childProps: {
-              ...this.state.childProps,
-              ...p,
-            },
-          });
-          if (this.mounted) {
-            this.forceUpdate();
-          }
-        }
-      },
     };
 
     series([
@@ -228,7 +212,6 @@ export default class RouterHookContainer extends React.Component {
     /* eslint-enable no-unused-vars */
     const passProps = {
       ...restProps,
-      ...this.state.childProps,
       componentStatus: this.state.status,
       reloadComponent: this.reloadComponent,
     };
