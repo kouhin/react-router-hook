@@ -55,6 +55,7 @@ export default class RouterHookContext extends React.Component {
     if (nextProps.location === this.props.location) {
       return;
     }
+    this.componentStatuses = {};
     if (this.loading) {
       this.props.onAborted();
     }
@@ -73,11 +74,11 @@ export default class RouterHookContext extends React.Component {
       return;
     }
     this.componentStatuses[routerHooks.id] = status;
-    this.updateRouterLoading();
     if (err) {
       this.props.onError({ Component, error: err });
       this.componentStatuses[routerHooks.id] = ComponentStatus.DONE;
     }
+    this.updateRouterLoading();
   }
 
   getComponentStatus(Component) {
@@ -129,7 +130,7 @@ export default class RouterHookContext extends React.Component {
       }
     }
 
-    const loading = done !== total;
+    const loading = done < total;
     if (this.routerEventEmitter) {
       this.routerEventEmitter.emit(CHANGE_LOADING_STATE, loading, {
         total,
