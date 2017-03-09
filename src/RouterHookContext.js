@@ -55,6 +55,7 @@ export default class RouterHookContext extends React.Component {
     if (nextProps.location === this.props.location) {
       return;
     }
+    this.componentStatuses = {};
     if (this.loading) {
       this.props.onAborted();
     }
