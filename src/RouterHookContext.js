@@ -113,20 +113,22 @@ export default class RouterHookContext extends React.Component {
     let done = 0;
     for (let i = 0, length = components.length; i < length; i += 1) {
       const hookId = components[i][routerHookPropName].id;
-      total += 1;
       const status = this.componentStatuses[hookId];
-      switch (status) {
-        case ComponentStatus.INIT:
-          init += 1;
-          break;
-        case ComponentStatus.DEFER:
-          defer += 1;
-          break;
-        case ComponentStatus.DONE:
-          done += 1;
-          break;
-        default:
-          init += 1;
+      if (status) {
+        total += 1;
+        switch (status) {
+          case ComponentStatus.INIT:
+            init += 1;
+            break;
+          case ComponentStatus.DEFER:
+            defer += 1;
+            break;
+          case ComponentStatus.DONE:
+            done += 1;
+            break;
+          default:
+            throw new Error(`Unknown status ${status}`);
+        }
       }
     }
 
