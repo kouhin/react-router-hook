@@ -1,7 +1,4 @@
 import React from 'react';
-import series from 'async/series';
-import asyncify from 'async/asyncify';
-import mapSeries from 'async/mapSeries';
 
 import { ComponentStatus, routerHookPropName } from './constants';
 import getInitStatus from './getInitStatus';
@@ -26,54 +23,48 @@ export default class RouterHookContainer extends React.Component {
     super(props, context);
     this.setStatus = this.setStatus.bind(this);
     this.reloadComponent = this.reloadComponent.bind(this);
-    this.mounted = false;
 
-    this.shouldReload = false;
+    this.mounted = false;
     this.state = {
       status: getInitStatus(
         props.children.type,
         this.props.routerWillEnterHooks,
       ),
-      childProps: {},
     };
   }
 
   componentWillMount() {
-    this.context.routerHookContext.setComponentStatus(this.Component, this.state.status);
+    this.context.routerHookContext.setComponentStatus(this.Component, getInitStatus(
+      this.Component,
+      this.props.routerWillEnterHooks,
+    ));
   }
 
   componentDidMount() {
     this.mounted = true;
-    setTimeout(() => {
+    setImmediate(() => {
       this.reloadComponent(true);
     });
   }
 
   componentWillReceiveProps(nextProps) {
     if (this.props.renderProps.location !== nextProps.renderProps.location) {
+      this.context.routerHookContext.setComponentStatus(this.Component, getInitStatus(
+        this.Component,
+        this.props.routerWillEnterHooks,
+      ));
       this.setState({
         status: getInitStatus(
           this.Component,
           this.props.routerWillEnterHooks,
         ),
-        childProps: {},
       });
-      this.shouldReload = true;
-      if (this.mounted) {
-        this.forceUpdate();
-      }
-      return;
-    }
-
-    if (this.mounted) {
-      this.forceUpdate();
     }
   }
 
-  componentDidUpdate() {
-    if (this.shouldReload) {
-      this.shouldReload = false;
-      setTimeout(() => {
+  componentDidUpdate(prevProps) {
+    if (this.props.renderProps.location !== prevProps.renderProps.location) {
+      setImmediate(() => {
         this.reloadComponent(true);
       });
     }
@@ -84,18 +75,23 @@ export default class RouterHookContainer extends React.Component {
   }
 
   setStatus(status, shouldReport, err) {
-    const shouldUpdate = this.state.status !== status;
-    this.setState({
-      status,
-    });
-    if (shouldReport) {
-      this.context.routerHookContext.setComponentStatus(this.Component, status, err);
+    if (this.state.status === status) {
+      return Promise.resolve();
     }
-    if (shouldUpdate) {
-      if (this.mounted) {
-        this.forceUpdate();
+    return new Promise((resolve) => {
+      if (!this.mounted) {
+        resolve();
+        return;
       }
-    }
+      this.setState({
+        status,
+      }, () => {
+        if (shouldReport) {
+          this.context.routerHookContext.setComponentStatus(this.Component, status, err);
+        }
+        resolve();
+      });
+    });
   }
 
   get Component() {
@@ -103,9 +99,12 @@ export default class RouterHookContainer extends React.Component {
   }
 
   reloadComponent(shouldReportStatus = false) {
+    if (!this.mounted) {
+      return Promise.resolve();
+    }
     const routerHooks = this.Component[routerHookPropName];
     if (!routerHooks) {
-      return;
+      return Promise.resolve();
     }
     /* eslint-disable no-unused-vars */
     const {
@@ -122,97 +121,75 @@ export default class RouterHookContainer extends React.Component {
       routerWillEnterHooks,
     );
 
-    this.setStatus(initStatus, shouldReportStatus);
-    if (initStatus === ComponentStatus.DONE) {
-      return;
-    }
-
     const location = renderProps.location;
 
     const args = {
       ...renderProps,
       ...locals,
-      getProps: () => this.state.childProps,
-      setProps: (p) => {
-        if (location === renderProps.location) {
-          this.setState({
-            childProps: {
-              ...this.state.childProps,
-              ...p,
-            },
-          });
-          if (this.mounted) {
-            this.forceUpdate();
-          }
-        }
-      },
     };
 
-    series([
-      (callback) => {
-        if (location !== renderProps.location) {
-          callback(ABORT);
-          return;
+    return this.setStatus(initStatus, shouldReportStatus)
+      .then(() => {
+        if (location !== renderProps.location || !this.mounted) {
+          return Promise.reject(ABORT);
         }
-        if (initStatus === 'init') {
-          callback();
-          return;
+        if (this.state.status !== ComponentStatus.INIT) {
+          return null;
         }
         const willEnterHooks = routerWillEnterHooks
-              .map(key => routerHooks[key])
-              .filter(f => f)
-              .map(f => asyncify(f));
-        if (willEnterHooks.length > 0) {
-          mapSeries(willEnterHooks, (hook, cb) => {
-            if (location === renderProps.location) {
-              hook(args, cb);
+          .map(key => routerHooks[key])
+          .filter(f => f);
+        if (willEnterHooks.length < 1) {
+          return null;
+        }
+        return willEnterHooks
+          .reduce((total, hook) => total.then(() => {
+            if (location !== renderProps.location || !this.mounted) {
+              return Promise.reject(ABORT);
             }
-          }, callback);
-        } else {
-          callback();
+            return hook(args);
+          }), Promise.resolve());
+      })
+      .then(() => {
+        if (location !== renderProps.location || !this.mounted) {
+          return Promise.reject(ABORT);
         }
-      },
-      (callback) => {
-        if (location !== renderProps.location) {
-          callback(ABORT);
-          return;
+        if (this.state.status !== ComponentStatus.INIT) {
+          return null;
         }
-        this.setStatus(ComponentStatus.DEFER, shouldReportStatus);
-        callback();
-      },
-      (callback) => {
-        if (location !== renderProps.location) {
-          callback(ABORT);
-          return;
+        // Wait for rendering
+        return this.setStatus(ComponentStatus.DEFER, shouldReportStatus);
+      })
+      .then(() => {
+        if (location !== renderProps.location || !this.mounted) {
+          return Promise.reject(ABORT);
         }
         const didEnterHooks = routerDidEnterHooks
-          .map(key => routerHooks[key])
-          .filter(f => f)
-              .map(f => asyncify(f));
-        if (didEnterHooks.length > 0) {
-          mapSeries(didEnterHooks, (hook, cb) => {
-            if (location === renderProps.location) {
-              hook(args, cb);
+              .map(key => routerHooks[key])
+              .filter(f => f);
+        if (didEnterHooks.length < 1) {
+          return null;
+        }
+        return didEnterHooks
+          .reduce((total, hook) => total.then(() => {
+            if (location !== renderProps.location || !this.mounted) {
+              return Promise.reject(ABORT);
             }
-          }, callback);
-        } else {
-          callback();
+            return hook(args);
+          }), Promise.resolve());
+      })
+      .then(() => {
+        if (location !== renderProps.location || !this.mounted) {
+          return Promise.reject(ABORT);
         }
-      },
-      (callback) => {
-        if (location !== renderProps.location) {
-          callback(ABORT);
-          return;
+        return this.setStatus(ComponentStatus.DONE, shouldReportStatus);
+      })
+      .catch((err) => {
+        if (err === ABORT) {
+          return null;
         }
-        this.setStatus(ComponentStatus.DONE, shouldReportStatus);
-        callback();
-      },
-    ], (err) => {
-      if (err && err === ABORT) {
-        return;
-      }
-      this.setStatus(ComponentStatus.DONE, shouldReportStatus, err);
-    });
+        return this.setStatus(ComponentStatus.DONE, shouldReportStatus, err);
+      });
   }
 
   render() {
@@ -228,7 +205,6 @@ export default class RouterHookContainer extends React.Component {
     /* eslint-enable no-unused-vars */
     const passProps = {
       ...restProps,
-      ...this.state.childProps,
       componentStatus: this.state.status,
       reloadComponent: this.reloadComponent,
     };
