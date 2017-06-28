@@ -1,4 +1,5 @@
 import React from 'react';
+import PropTypes from 'prop-types';
 import EventEmitter from 'eventemitter3';
 import { ComponentStatus, routerHookPropName } from './constants';
 import getAllComponents from './getAllComponents';
@@ -14,13 +15,13 @@ const noop = () => null;
 
 export default class RouterHookContext extends React.Component {
   static propTypes = {
-    children: React.PropTypes.node.isRequired,
-    components: React.PropTypes.arrayOf(componentsShape).isRequired,
+    children: PropTypes.node.isRequired,
+    components: PropTypes.arrayOf(componentsShape).isRequired,
     location: locationShape.isRequired,
-    onAborted: React.PropTypes.func.isRequired,
-    onCompleted: React.PropTypes.func.isRequired,
-    onError: React.PropTypes.func.isRequired,
-    onStarted: React.PropTypes.func.isRequired,
+    onAborted: PropTypes.func.isRequired,
+    onCompleted: PropTypes.func.isRequired,
+    onError: PropTypes.func.isRequired,
+    onStarted: PropTypes.func.isRequired,
   };
 
   static childContextTypes = {

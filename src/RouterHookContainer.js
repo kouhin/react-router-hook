@@ -1,4 +1,5 @@
 import React from 'react';
+import PropTypes from 'prop-types';
 
 import { ComponentStatus, routerHookPropName } from './constants';
 import getInitStatus from './getInitStatus';
@@ -8,11 +9,11 @@ const ABORT = 'abort';
 
 export default class RouterHookContainer extends React.Component {
   static propTypes = {
-    children: React.PropTypes.node.isRequired,
-    locals: React.PropTypes.object.isRequired,
+    children: PropTypes.node.isRequired,
+    locals: PropTypes.object.isRequired,
     renderProps: renderPropsShape.isRequired,
-    routerDidEnterHooks: React.PropTypes.arrayOf(React.PropTypes.string).isRequired,
-    routerWillEnterHooks: React.PropTypes.arrayOf(React.PropTypes.string).isRequired,
+    routerDidEnterHooks: PropTypes.arrayOf(PropTypes.string).isRequired,
+    routerWillEnterHooks: PropTypes.arrayOf(PropTypes.string).isRequired,
   }
 
   static contextTypes = {
