@@ -3,7 +3,7 @@ react-router-hook
 
 [![Greenkeeper badge](https://badges.greenkeeper.io/kouhin/react-router-hook.svg)](https://greenkeeper.io/)
 
-Universal data fetching and lifecycle management for react router with multiple components. Inspired by [redial](https://github.com/markdalgleish/redial), [react-router-redial](https://github.com/dlmr/react-router-redial) and [async props](https://github.com/ryanflorence/async-props).
+Universal data fetching and lifecycle management for react-router@3 with multiple components. Inspired by [redial](https://github.com/markdalgleish/redial), [react-router-redial](https://github.com/dlmr/react-router-redial) and [async props](https://github.com/ryanflorence/async-props).
 
 [![CircleCI](https://circleci.com/gh/kouhin/react-router-hook.svg?style=svg)](https://circleci.com/gh/kouhin/react-router-hook)
 [![dependency status](https://david-dm.org/kouhin/react-router-hook.svg?style=flat-square)](https://david-dm.org/kouhin/react-router-hook)
