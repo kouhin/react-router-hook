@@ -16,17 +16,17 @@ export default function triggerHooksOnServer(
   };
 
   const promises = getAllComponents(renderProps.components)
-        .map((component) => {
-          const routerHooks = component[routerHookPropName];
-          if (!routerHooks) return null;
-          const runHooks = hooks.map(key => routerHooks[key]).filter(f => f);
-          if (runHooks.length < 1) return null;
-          return runHooks.reduce(
-            (total, current) => total.then(() => current(args))
-            , Promise.resolve())
-            .catch(err => onComponentError({ Component: component, error: err }));
-        })
-        .filter(p => p);
+    .map((component) => {
+      const routerHooks = component[routerHookPropName];
+      if (!routerHooks) return null;
+      const runHooks = hooks.map(key => routerHooks[key]).filter(f => f);
+      if (runHooks.length < 1) return null;
+      return runHooks.reduce(
+        (total, current) => total.then(() => current(args))
+        , Promise.resolve())
+        .catch(err => onComponentError({ Component: component, error: err }));
+    })
+    .filter(p => p);
 
   if (callback) {
     Promise.all(promises)
