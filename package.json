@@ -1,13 +1,13 @@
 {
   "name": "react-router-hook",
-  "version": "0.6.1",
+  "version": "0.6.2",
   "description": "Universal data fetching and lifecycle management for react router with multiple components",
   "main": "./lib/index.js",
   "scripts": {
     "build": "babel src --out-dir lib",
     "clean": "rimraf lib",
     "lint": "$(npm bin)/eslint src",
-    "prepublish": "npm run clean && npm run test && npm run build",
+    "prepare": "npm run clean && npm run test && npm run build",
     "test": "$(npm bin)/eslint src"
   },
   "files": [
@@ -32,22 +32,22 @@
   ],
   "license": "MIT",
   "devDependencies": {
-    "babel-cli": "^6.24.1",
-    "babel-core": "^6.25.0",
+    "babel-cli": "^6.26.0",
+    "babel-core": "^6.26.0",
     "babel-eslint": "^7.2.3",
     "babel-plugin-transform-runtime": "^6.23.0",
-    "babel-preset-env": "^1.5.2",
+    "babel-preset-env": "^1.6.0",
     "babel-preset-react": "^6.24.1",
     "babel-preset-stage-0": "^6.24.1",
-    "eslint-config-airbnb-deps": "^15.0.1",
-    "eslint-plugin-babel": "^4.1.1",
+    "eslint": "^4.6.1",
+    "eslint-config-airbnb-deps": "^15.1.0",
+    "eslint-plugin-babel": "^4.1.2",
     "react": "^15.6.1",
     "react-dom": "^15.6.1",
     "rimraf": "^2.6.1"
   },
   "dependencies": {
-    "babel-runtime": "^6.23.0",
-    "eslint": "^3.19.0",
+    "babel-runtime": "^6.26.0",
     "eventemitter3": "^2.0.3",
     "lodash": "^4.17.4",
     "prop-types": "^15.5.10",

@@ -166,8 +166,8 @@ export default class RouterHookContainer extends React.Component {
           return Promise.reject(ABORT);
         }
         const didEnterHooks = routerDidEnterHooks
-              .map(key => routerHooks[key])
-              .filter(f => f);
+          .map(key => routerHooks[key])
+          .filter(f => f);
         if (didEnterHooks.length < 1) {
           return null;
         }
