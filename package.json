@@ -1,13 +1,13 @@
 {
   "name": "react-router-hook",
-  "version": "0.6.1",
+  "version": "0.7.0",
   "description": "Universal data fetching and lifecycle management for react router with multiple components",
   "main": "./lib/index.js",
   "scripts": {
     "build": "babel src --out-dir lib",
     "clean": "rimraf lib",
     "lint": "$(npm bin)/eslint src",
-    "prepublish": "npm run clean && npm run test && npm run build",
+    "prepare": "npm run clean && npm run test && npm run build",
     "test": "$(npm bin)/eslint src"
   },
   "files": [
