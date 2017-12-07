@@ -6,8 +6,6 @@ Universal data fetching and lifecycle management for react-router@3 with multipl
 [![CircleCI](https://circleci.com/gh/kouhin/react-router-hook.svg?style=svg)](https://circleci.com/gh/kouhin/react-router-hook)
 [![dependency status](https://david-dm.org/kouhin/react-router-hook.svg?style=flat-square)](https://david-dm.org/kouhin/react-router-hook)
 
-**NOTICE: react-router-hook is under heavy development and is not yet ready for production use.**
-
 ## Installation
 
 ```
