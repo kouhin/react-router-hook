@@ -112,7 +112,7 @@ export default class RouterHookContext extends React.Component {
     let init = 0;
     let defer = 0;
     let done = 0;
-    for (let i = 0, length = components.length; i < length; i += 1) {
+    for (let i = 0, len = components.length; i < len; i += 1) {
       const hookId = components[i][routerHookPropName].id;
       const status = this.componentStatuses[hookId];
       if (status) {
