@@ -21,9 +21,7 @@ export default function triggerHooksOnServer(
       if (!routerHooks) return null;
       const runHooks = hooks.map(key => routerHooks[key]).filter(f => f);
       if (runHooks.length < 1) return null;
-      return runHooks.reduce(
-        (total, current) => total.then(() => current(args))
-        , Promise.resolve())
+      return runHooks.reduce((total, current) => total.then(() => current(args)), Promise.resolve())
         .catch(err => onComponentError({ Component: component, error: err }));
     })
     .filter(p => p);
