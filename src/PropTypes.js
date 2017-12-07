@@ -1,6 +1,14 @@
 import PropTypes from 'prop-types';
 
-const { func, object, arrayOf, oneOfType, element, shape, string } = PropTypes;
+const {
+  func,
+  object,
+  arrayOf,
+  oneOfType,
+  element,
+  shape,
+  string,
+} = PropTypes;
 
 export const componentShape = oneOfType([func, string]);
 export const componentsShape = oneOfType([componentShape, object]);

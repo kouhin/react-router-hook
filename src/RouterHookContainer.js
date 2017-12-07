@@ -43,9 +43,7 @@ export default class RouterHookContainer extends React.Component {
 
   componentDidMount() {
     this.mounted = true;
-    setImmediate(() => {
-      this.reloadComponent(true);
-    });
+    this.reloadComponent(true);
   }
 
   componentWillReceiveProps(nextProps) {
@@ -65,9 +63,7 @@ export default class RouterHookContainer extends React.Component {
 
   componentDidUpdate(prevProps) {
     if (this.props.renderProps.location !== prevProps.renderProps.location) {
-      setImmediate(() => {
-        this.reloadComponent(true);
-      });
+      this.reloadComponent(true);
     }
   }
 
@@ -75,28 +71,18 @@ export default class RouterHookContainer extends React.Component {
     this.mounted = false;
   }
 
-  setStatus(status, shouldReport, err) {
-    if (this.state.status === status) {
-      return Promise.resolve();
-    }
-    return new Promise((resolve) => {
-      if (!this.mounted) {
-        resolve();
-        return;
-      }
-      this.setState({
-        status,
-      }, () => {
-        if (shouldReport) {
-          this.context.routerHookContext.setComponentStatus(this.Component, status, err);
-        }
-        resolve();
-      });
-    });
-  }
-
   get Component() {
     return this.props.children.type;
+  }
+
+  setStatus(status, shouldReport, err) {
+    if (this.state.status === status || !this.mounted) {
+      return;
+    }
+    this.setState({ status });
+    if (shouldReport) {
+      this.context.routerHookContext.setComponentStatus(this.Component, status, err);
+    }
   }
 
   reloadComponent(shouldReportStatus = false) {
@@ -107,42 +93,33 @@ export default class RouterHookContainer extends React.Component {
     if (!routerHooks) {
       return Promise.resolve();
     }
-    /* eslint-disable no-unused-vars */
     const {
-      children,
       locals,
       renderProps,
       routerDidEnterHooks,
       routerWillEnterHooks,
     } = this.props;
-    /* eslint-enable no-unused-vars */
 
     const initStatus = getInitStatus(
       this.Component,
       routerWillEnterHooks,
     );
 
-    const location = renderProps.location;
-
+    const { location } = renderProps;
     const args = {
       ...renderProps,
       ...locals,
     };
 
-    return this.setStatus(initStatus, shouldReportStatus)
+    return Promise.resolve()
       .then(() => {
-        if (location !== renderProps.location || !this.mounted) {
-          return Promise.reject(ABORT);
-        }
-        if (this.state.status !== ComponentStatus.INIT) {
-          return null;
-        }
         const willEnterHooks = routerWillEnterHooks
           .map(key => routerHooks[key])
           .filter(f => f);
         if (willEnterHooks.length < 1) {
           return null;
         }
+        this.setStatus(initStatus, shouldReportStatus);
         return willEnterHooks
           .reduce((total, hook) => total.then(() => {
             if (location !== renderProps.location || !this.mounted) {
@@ -155,21 +132,14 @@ export default class RouterHookContainer extends React.Component {
         if (location !== renderProps.location || !this.mounted) {
           return Promise.reject(ABORT);
         }
-        if (this.state.status !== ComponentStatus.INIT) {
-          return null;
-        }
-        // Wait for rendering
-        return this.setStatus(ComponentStatus.DEFER, shouldReportStatus);
-      })
-      .then(() => {
-        if (location !== renderProps.location || !this.mounted) {
-          return Promise.reject(ABORT);
-        }
         const didEnterHooks = routerDidEnterHooks
           .map(key => routerHooks[key])
           .filter(f => f);
         if (didEnterHooks.length < 1) {
           return null;
+        }
+        if (this.state.status !== ComponentStatus.DEFER) {
+          this.setStatus(ComponentStatus.DEFER, shouldReportStatus);
         }
         return didEnterHooks
           .reduce((total, hook) => total.then(() => {
@@ -183,18 +153,20 @@ export default class RouterHookContainer extends React.Component {
         if (location !== renderProps.location || !this.mounted) {
           return Promise.reject(ABORT);
         }
-        return this.setStatus(ComponentStatus.DONE, shouldReportStatus);
+        if (this.state.status !== ComponentStatus.DONE) {
+          this.setStatus(ComponentStatus.DONE, shouldReportStatus);
+        }
+        return null;
       })
       .catch((err) => {
         if (err === ABORT) {
-          return null;
+          return;
         }
-        return this.setStatus(ComponentStatus.DONE, shouldReportStatus, err);
+        this.setStatus(ComponentStatus.DONE, shouldReportStatus, err);
       });
   }
 
   render() {
-    /* eslint-disable no-unused-vars */
     const {
       children,
       locals,
@@ -203,7 +175,6 @@ export default class RouterHookContainer extends React.Component {
       routerWillEnterHooks,
       ...restProps
     } = this.props;
-    /* eslint-enable no-unused-vars */
     const passProps = {
       ...restProps,
       componentStatus: this.state.status,
