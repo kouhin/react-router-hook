@@ -1,7 +1,9 @@
 react-router-hook
 =========================
 
-Universal data fetching and lifecycle management for react-router@3 with multiple components. Inspired by [redial](https://github.com/markdalgleish/redial), [react-router-redial](https://github.com/dlmr/react-router-redial) and [async props](https://github.com/ryanflorence/async-props).
+Universal data fetching and lifecycle management for react-router 2, 3, 4 (and may support other router libraries) with multiple components.
+
+Inspired by [redial](https://github.com/markdalgleish/redial), [react-router-redial](https://github.com/dlmr/react-router-redial) and [async props](https://github.com/ryanflorence/async-props).
 
 [![CircleCI](https://circleci.com/gh/kouhin/react-router-hook.svg?style=svg)](https://circleci.com/gh/kouhin/react-router-hook)
 [![dependency status](https://david-dm.org/kouhin/react-router-hook.svg?style=flat-square)](https://david-dm.org/kouhin/react-router-hook)
@@ -16,32 +18,20 @@ npm install --save react-router-hook
 
 ```javascript
 import { browserHistory, Router, applyRouterMiddleware } from 'react-router';
-import { useRouterHook, routerHooks } from 'react-router-hook';
+import { createHookStore, useRouterHook, routerHooks } from 'react-router-hook';
 
-const locals = {
-  dispatch: store.dispatch, // redux store and dispatch, you can use any locals
-  getState: store.getState,
-};
-
-const onAborted = () => {
-  console.info('aborted');
-};
-const onCompleted = () => {
-  console.info('completed');
-};
-const onError = (error) => {
-  console.error(error);
+const triggerConfig = {
+  store: createHookStore(),
+  locals: {
+    dispatch: store.dispatch, // redux store and dispatch, you can use any locals
+    getState: store.getState,
+  },
+  hookNames: ['fetch', 'defer', 'done'],
+  onError: ({Component, error}) => console.error(Component, error),
+  version: browserHistory.location.pathname
 };
 
-const routerHookMiddleware = useRouterHook({
-  locals,
-  routerWillEnterHooks: ['fetch'],
-  routerDidEnterHooks: ['defer', 'done'],
-  onAborted,
-  onStarted,
-  onCompleted,
-  onError,
-});
+const routerHookMiddleware = useRouterHook(triggerConfig);
 
 ReactDOM.render((
   <Router
@@ -116,7 +106,7 @@ class UserFooter extends React.Component {
 ``` javascript
 
 import { match } from 'react-router';
-import { triggerHooksOnServer } from 'react-router-hook';
+import { flattenComponents, createHookStore, RouterHookProvider, triggerHooks } from 'react-router-hook';
 // Other imports
 
 import routes from './routes';
@@ -133,38 +123,71 @@ app.get('*', (req, res) => {
     if (err) {
       // Error Handler
     }
-    const locals = {
-      dispatch: store.dispatch,
-      getState: store.getState,
+    const triggerConfig = {
+      store: createHookStore(),
+      locals: {
+        dispatch: store.dispatch, // redux store and dispatch, you can use any locals
+        getState: store.getState,
+      },
+      hookNames: ['fetch', 'defer'], // Only run fetch and defer on server-side
+      onError: ({Component, error}) => console.error(Component, error),
     };
-    triggerHooksOnServer(
-      renderProps,
-      ['fetch', 'defer'],
-      {
-        dispatch,
-        getState,
-      },
-      // If onComponentError is null, callback will be immediately called with the error
-      onComponentError: (err) => {
-        console.error(err.Component, err.error);
-      },
-      // triggerHooksOnServer() will return a Promise if there is no callback
-      (err) => {
-        if (err) {
-          res.status(500).end();
-          return;
-        }
-        const body = ReactDOMServer.renderToString(
-          <Provider store={store}>
+
+    triggerHooks(
+      flattenComponents(renderProps.components),
+      triggerConfig
+    ).then(() => {
+      const body = ReactDOMServer.renderToString(
+        <Provider store={store}>
+          <RouterHookProvider value={{triggerConfig: triggerConfig, version: renderProps.location.pathname}}>
             <RouterContext {...renderProps} />
-          </Provider>,
-        );
-        res.send(`<html><head></head><body>${body}</body>`);
-      },
+          </RouterHookProvider>
+        </Provider>,
+      );
+      res.send(`<html><head></head><body>${body}</body>`);
+    });
   });
 });
-triggerHooksOnServer
 ```
+
+## API
+
+`TriggerConfig`
+
+``` javascript
+PropTypes.shape({
+  hookNames: PropTypes.arrayOf(PropTypes.string).isRequired,
+  locals: PropTypes.object.isRequired,
+  store: PropTypes.object.isRequired,
+  onError: PropTypes.func
+})
+```
+
+
+
+### `createHookStore(initState): Store`
+
+An alias of unistore/createStore.
+
+### `RouterHookProvider(value)`
+
+Value must be: `{triggerConfig: TriggerConfig, version: String}`
+
+### `RouterHookConsumer`
+
+### `@routerHooks(hooks: Object, options: Object)`
+
+`options`:
+
+  - `preventUpdateOnLoad`: [Boolean], default: true. Whether prevent re-render when hooks are running.
+  - `exposeLoading`: [Boolean], default: false. When it's true, `loading` will be exposed to wrapped component as prop.
+  - `exposeReloadComponent`: [Boolean], default: false. When it's true, `reloadComponent` will be exposed to wrapped component as prop.
+
+### `triggerHooks(components, triggerConfig, version, [force = true])`
+
+### `flatternComponents(components)` A helper for react-router@3
+
+### `useRouterHook(triggerConfig)` A helper for react-router@3
 
 ## Monitoring router status
 
