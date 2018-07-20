@@ -2,7 +2,7 @@ import uuid from 'uuid';
 import React from 'react';
 import hoistNonReactStatics from 'hoist-non-react-statics';
 import delve from 'dlv';
-import PropTypes from 'prop-types';
+import subscribeToContext from 'react-context-subscriber';
 
 import propName from './propName';
 import { RouterHookConsumer } from './context';
@@ -14,8 +14,7 @@ const DEFAULT_HOOK_OPTIONS = {
   exposeReloadComponent: false
 };
 
-const configProp = '@@triggerConfig';
-const versionProp = '@@version';
+const contextProp = '@@hookctx';
 
 const routerHooks = (hooks, hookOpts) => {
   // eslint-disable-next-line no-param-reassign
@@ -28,7 +27,7 @@ const routerHooks = (hooks, hookOpts) => {
     // eslint-disable-next-line no-param-reassign
     Component[propName] = hooks;
 
-    class RouterHookInnerLoadable extends React.Component {
+    class RouterHookLoadable extends React.Component {
       constructor(props) {
         super(props);
         this.updateState = this.updateState.bind(this);
@@ -40,29 +39,28 @@ const routerHooks = (hooks, hookOpts) => {
       }
 
       componentDidMount() {
-        const { [configProp]: triggerConfig } = this.props;
+        const { [contextProp]: context } = this.props;
+        const { triggerConfig } = context;
         const { store } = triggerConfig;
         this.unsubscribe = store.subscribe(this.updateState);
         setTimeout(this.reloadComponent);
       }
 
       shouldComponentUpdate(nextProps, nextState) {
-        const { [versionProp]: version } = this.props;
-        const { [versionProp]: nextVersion } = nextProps;
-
+        const { [contextProp]: context } = this.props;
+        const { [contextProp]: nextContext } = nextProps;
         const { loading } = this.state;
-
         if (!hookOptions.preventUpdateOnLoad) return true;
         if (hookOptions.exposeLoading && loading !== nextState.loading) {
           return true;
         }
-        return !nextState.loading || version !== nextVersion;
+        return !nextState.loading || context.version !== nextContext.version;
       }
 
       componentDidUpdate(prevProps) {
-        const { [versionProp]: version } = this.props;
-        const { [versionProp]: prevVersion } = prevProps;
-        if (version !== prevVersion) {
+        const { [contextProp]: context } = this.props;
+        const { [contextProp]: prevContext } = prevProps;
+        if (context.version !== prevContext.version) {
           setTimeout(this.reloadComponent);
         }
       }
@@ -75,7 +73,8 @@ const routerHooks = (hooks, hookOpts) => {
       }
 
       updateState() {
-        const { [configProp]: triggerConfig } = this.props;
+        const { [contextProp]: context } = this.props;
+        const { triggerConfig } = context;
         const { store } = triggerConfig;
         const loading = delve(store.getState(), [hooks.id, 'loading'], false);
         const props = delve(store.getState(), [hooks.id, 'props'], null);
@@ -89,17 +88,16 @@ const routerHooks = (hooks, hookOpts) => {
       }
 
       reloadComponent() {
-        const {
-          [configProp]: triggerConfig,
-          [versionProp]: version
-        } = this.props;
+        const { [contextProp]: context } = this.props;
+        const { triggerConfig, version } = context;
         return triggerHooks(Component, triggerConfig, version);
       }
 
       render() {
-        const { [configProp]: triggerConfig, ...restProps } = this.props;
-        const { loading } = this.state;
+        const { [contextProp]: context, ...restProps } = this.props;
+        const { triggerConfig } = context;
         const { store } = triggerConfig;
+        const { loading } = this.state;
 
         const props = {
           ...restProps,
@@ -115,35 +113,12 @@ const routerHooks = (hooks, hookOpts) => {
       }
     }
 
-    RouterHookInnerLoadable.propTypes = {
-      [configProp]: PropTypes.shape({
-        hookNames: PropTypes.arrayOf(PropTypes.string).isRequired,
-        locals: PropTypes.object.isRequired,
-        store: PropTypes.object.isRequired,
-        onError: PropTypes.func
-      }).isRequired,
-      [versionProp]: PropTypes.string.isRequired
-    };
-
-    function RouterHookLoadable(props) {
-      return (
-        <RouterHookConsumer>
-          {({ triggerConfig, version }) => {
-            if (!triggerConfig || !version) return <Component {...props} />;
-            const passProps = {
-              ...props,
-              [configProp]: triggerConfig,
-              [versionProp]: version
-            };
-            return <RouterHookInnerLoadable {...passProps} />;
-          }}
-        </RouterHookConsumer>
-      );
-    }
-
     RouterHookLoadable.WrappedComponent = Component;
+    hoistNonReactStatics(RouterHookLoadable, Component);
 
-    return hoistNonReactStatics(RouterHookLoadable, Component);
+    return subscribeToContext(RouterHookConsumer, contextProp)(
+      RouterHookLoadable
+    );
   };
 };
 
