@@ -2,7 +2,6 @@ import uuid from 'uuid';
 import React from 'react';
 import hoistNonReactStatics from 'hoist-non-react-statics';
 import delve from 'dlv';
-import subscribeToContext from 'react-context-subscriber';
 
 import propName from './propName';
 import { RouterHookConsumer } from './context';
@@ -15,6 +14,16 @@ const DEFAULT_HOOK_OPTIONS = {
 };
 
 const contextProp = '@@hookctx';
+
+function getDisplayName(Component) {
+  return (
+    Component.displayName ||
+    Component.name ||
+    (typeof Component === 'string' && Component.length > 0
+      ? Component
+      : 'Unknown')
+  );
+}
 
 const routerHooks = (hooks, hookOpts) => {
   // eslint-disable-next-line no-param-reassign
@@ -112,13 +121,27 @@ const routerHooks = (hooks, hookOpts) => {
         return <Component {...props} />;
       }
     }
+    RouterHookLoadable.displayName = `RouterHookLoadable(${getDisplayName(
+      Component
+    )})`;
 
-    RouterHookLoadable.WrappedComponent = Component;
-    hoistNonReactStatics(RouterHookLoadable, Component);
-
-    return subscribeToContext(RouterHookConsumer, contextProp)(
-      RouterHookLoadable
+    const WithRouterHookConsumer = props => (
+      <RouterHookConsumer>
+        {context => {
+          const passProps = {
+            ...props,
+            [contextProp]: context
+          };
+          return <RouterHookLoadable {...passProps} />;
+        }}
+      </RouterHookConsumer>
     );
+    WithRouterHookConsumer.WrappedComponent = Component;
+    hoistNonReactStatics(WithRouterHookConsumer, Component);
+    WithRouterHookConsumer.displayName = `@routerHooks(${getDisplayName(
+      RouterHookLoadable
+    )})`;
+    return WithRouterHookConsumer;
   };
 };
 

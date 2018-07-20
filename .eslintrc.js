@@ -20,6 +20,7 @@ module.exports = {
   },
   plugins: ['import', 'jest'],
   rules: {
+    'react/prop-types': 0,
     'react/forbid-prop-types': 0,
     'react/jsx-filename-extension': 0
   }
