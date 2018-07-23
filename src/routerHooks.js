@@ -26,15 +26,16 @@ function getDisplayName(Component) {
 }
 
 const routerHooks = (hooks, hookOpts) => {
-  // eslint-disable-next-line no-param-reassign
-  hooks.id = hooks.id || uuid();
   const hookOptions = {
     ...DEFAULT_HOOK_OPTIONS,
     ...(hookOpts || {})
   };
   return Component => {
-    // eslint-disable-next-line no-param-reassign
+    const componentDisplayName = getDisplayName(Component);
+    /* eslint no-param-reassign:0 */
+    hooks.id = hooks.id || `${componentDisplayName}_${uuid()}`;
     Component[propName] = hooks;
+    /* eslint no-param-reassign:1 */
 
     class RouterHookLoadable extends React.Component {
       constructor(props) {
@@ -121,9 +122,7 @@ const routerHooks = (hooks, hookOpts) => {
         return <Component {...props} />;
       }
     }
-    RouterHookLoadable.displayName = `RouterHookLoadable(${getDisplayName(
-      Component
-    )})`;
+    RouterHookLoadable.displayName = `RouterHookLoadable(${componentDisplayName})`;
 
     const WithRouterHookConsumer = props => (
       <RouterHookConsumer>
@@ -138,9 +137,7 @@ const routerHooks = (hooks, hookOpts) => {
     );
     WithRouterHookConsumer.WrappedComponent = Component;
     hoistNonReactStatics(WithRouterHookConsumer, Component);
-    WithRouterHookConsumer.displayName = `@routerHooks(${getDisplayName(
-      RouterHookLoadable
-    )})`;
+    WithRouterHookConsumer.displayName = `@routerHooks(${componentDisplayName})`;
     return WithRouterHookConsumer;
   };
 };
