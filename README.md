@@ -179,7 +179,7 @@ Value must be: `{triggerConfig: TriggerConfig, version: String}`
 
 `options`:
 
-  - `preventUpdateOnLoad`: [Boolean], default: true. Whether prevent re-render when hooks are running.
+  - `blockMode`: [Boolean], default: true. When it's true, re-render will be blocked when hooks are running.
   - `exposeLoading`: [Boolean], default: false. When it's true, `loading` will be exposed to wrapped component as prop.
   - `exposeReloadComponent`: [Boolean], default: false. When it's true, `reloadComponent` will be exposed to wrapped component as prop.
 

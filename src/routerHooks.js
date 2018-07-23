@@ -8,7 +8,7 @@ import { RouterHookConsumer } from './context';
 import triggerHooks from './triggerHooks';
 
 const DEFAULT_HOOK_OPTIONS = {
-  preventUpdateOnLoad: true,
+  blockMode: true,
   exposeLoading: false,
   exposeReloadComponent: false
 };
@@ -59,7 +59,7 @@ const routerHooks = (hooks, hookOpts) => {
         const { [contextProp]: context } = this.props;
         const { [contextProp]: nextContext } = nextProps;
         const { loading } = this.state;
-        if (!hookOptions.preventUpdateOnLoad) return true;
+        if (!hookOptions.blockMode) return true;
         if (hookOptions.exposeLoading && loading !== nextState.loading) {
           return true;
         }
