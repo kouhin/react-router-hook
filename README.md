@@ -18,7 +18,7 @@ npm install --save react-router-hook
 
 ```javascript
 import { browserHistory, Router, applyRouterMiddleware } from 'react-router';
-import { createHookStore, useRouterHook, routerHooks } from 'react-router-hook';
+import { RouterHookProvider, createHookStore, routerHooks } from 'react-router-hook';
 
 const triggerConfig = {
   store: createHookStore(),
@@ -31,6 +31,18 @@ const triggerConfig = {
   version: browserHistory.location.pathname
 };
 
+function useRouterHook(triggerConfig) {
+  return {
+    renderRouterContext: (child, renderProps) => (
+      <RouterHookProvider
+        value={{ triggerConfig, version: renderProps.location.pathname }}
+      >
+        {child}
+      </RouterHookProvider>
+    ),
+    renderRouteComponent: child => child
+  };
+}
 const routerHookMiddleware = useRouterHook(triggerConfig);
 
 ReactDOM.render((
@@ -106,10 +118,31 @@ class UserFooter extends React.Component {
 ``` javascript
 
 import { match } from 'react-router';
-import { flattenComponents, createHookStore, RouterHookProvider, triggerHooks } from 'react-router-hook';
+import { createHookStore, RouterHookProvider, triggerHooks } from 'react-router-hook';
 // Other imports
 
 import routes from './routes';
+
+function pushComponent(acc, component) {
+  if (!component) {
+    return;
+  }
+  if (typeof component === 'object') {
+    Object.keys(component).forEach(key => pushComponent(acc, component[key]));
+    return;
+  }
+  acc.push(component);
+}
+
+// helper for getting all component for react-router 3
+function flattenComponents(components) {
+  const arr = Array.isArray(components) ? components : [components];
+  const result = [];
+  for (let i = 0, total = arr.length; i < total; i += 1) {
+    pushComponent(result, arr[i]);
+  }
+  return result;
+}
 
 app.get('*', (req, res) => {
   // create redux store (Optional);
@@ -184,10 +217,6 @@ Value must be: `{triggerConfig: TriggerConfig, version: String}`
   - `exposeReloadComponent`: [Boolean], default: false. When it's true, `reloadComponent` will be exposed to wrapped component as prop.
 
 ### `triggerHooks(components, triggerConfig, version, [force = true])`
-
-### `flatternComponents(components)` A helper for react-router@3
-
-### `useRouterHook(triggerConfig)` A helper for react-router@3
 
 ## Monitoring router status
 
