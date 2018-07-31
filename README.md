@@ -212,6 +212,7 @@ Value must be: `{triggerConfig: TriggerConfig, version: String}`
 
 `options`:
 
+  - `withRef`: [Boolean], default: false. When it's true, [React 16.3 Forwarding Refs] will be supported. Since https://github.com/reduxjs/react-redux/issues/914, the default value is set to `false`.
   - `blockMode`: [Boolean], default: true. When it's true, re-render will be blocked when hooks are running.
   - `exposeLoading`: [Boolean], default: false. When it's true, `loading` will be exposed to wrapped component as prop.
   - `exposeReloadComponent`: [Boolean], default: false. When it's true, `reloadComponent` will be exposed to wrapped component as prop.

@@ -8,12 +8,14 @@ import { RouterHookConsumer } from './context';
 import triggerHooks from './triggerHooks';
 
 const DEFAULT_HOOK_OPTIONS = {
+  withRef: false,
   blockMode: true,
   exposeLoading: false,
   exposeReloadComponent: false
 };
 
-const contextProp = '@@hookctx';
+const contextProp = '@@hook_ctx';
+const forwardedRef = '@@hook_ref';
 
 function getDisplayName(Component) {
   return (
@@ -23,6 +25,12 @@ function getDisplayName(Component) {
       ? Component
       : 'Unknown')
   );
+}
+
+function withForwardRef(withRef) {
+  return withRef && React.forwardRef
+    ? fn => React.forwardRef((props, ref) => fn(props, ref))
+    : fn => fn;
 }
 
 const routerHooks = (hooks, hookOpts) => {
@@ -104,7 +112,11 @@ const routerHooks = (hooks, hookOpts) => {
       }
 
       render() {
-        const { [contextProp]: context, ...restProps } = this.props;
+        const {
+          [contextProp]: context,
+          [forwardedRef]: ref,
+          ...restProps
+        } = this.props;
         const { triggerConfig } = context;
         const { store } = triggerConfig;
         const { loading } = this.state;
@@ -119,21 +131,24 @@ const routerHooks = (hooks, hookOpts) => {
         if (hookOptions.exposeReloadComponent) {
           props.reloadComponent = this.reloadComponent;
         }
-        return <Component {...props} />;
+        return <Component {...props} ref={ref} />;
       }
     }
     RouterHookLoadable.displayName = `RouterHookLoadable(${componentDisplayName})`;
 
-    const WithRouterHookConsumer = props => (
-      <RouterHookConsumer>
-        {context => {
-          const passProps = {
-            ...props,
-            [contextProp]: context
-          };
-          return <RouterHookLoadable {...passProps} />;
-        }}
-      </RouterHookConsumer>
+    const WithRouterHookConsumer = withForwardRef(hookOptions.withRef)(
+      (props, ref) => (
+        <RouterHookConsumer>
+          {context => {
+            const passProps = {
+              ...props,
+              [contextProp]: context,
+              [forwardedRef]: ref
+            };
+            return <RouterHookLoadable {...passProps} />;
+          }}
+        </RouterHookConsumer>
+      )
     );
     WithRouterHookConsumer.WrappedComponent = Component;
     hoistNonReactStatics(WithRouterHookConsumer, Component);
