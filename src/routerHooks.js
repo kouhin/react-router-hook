@@ -30,7 +30,7 @@ function getDisplayName(Component) {
 function withForwardRef(withRef) {
   return withRef && React.forwardRef
     ? fn => React.forwardRef((props, ref) => fn(props, ref))
-    : fn => fn;
+    : fn => props => fn(props);
 }
 
 const routerHooks = (hooks, hookOpts) => {
@@ -125,13 +125,11 @@ const routerHooks = (hooks, hookOpts) => {
           ...restProps,
           ...delve(store.getState(), [hooks.id, 'props'], {})
         };
-        if (hookOptions.exposeLoading) {
-          props.loading = loading;
-        }
-        if (hookOptions.exposeReloadComponent) {
+        if (hookOptions.exposeLoading) props.loading = loading;
+        if (hookOptions.exposeReloadComponent)
           props.reloadComponent = this.reloadComponent;
-        }
-        return <Component {...props} ref={ref} />;
+        if (ref) props.ref = ref;
+        return <Component {...props} />;
       }
     }
     RouterHookLoadable.displayName = `RouterHookLoadable(${componentDisplayName})`;
@@ -142,9 +140,9 @@ const routerHooks = (hooks, hookOpts) => {
           {context => {
             const passProps = {
               ...props,
-              [contextProp]: context,
-              [forwardedRef]: ref
+              [contextProp]: context
             };
+            if (ref) passProps[forwardedRef] = ref;
             return <RouterHookLoadable {...passProps} />;
           }}
         </RouterHookConsumer>
