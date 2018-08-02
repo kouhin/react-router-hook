@@ -24,7 +24,9 @@ function createOptions(format, outputPath, minify) {
           exclude: 'node_modules/**'
         }),
         resolve({
-          jsnext: true
+          jsnext: true,
+          main: true,
+          browser: format === 'umd'
         }),
         commonjs({
           include: /node_modules/
@@ -32,7 +34,7 @@ function createOptions(format, outputPath, minify) {
         replace({
           'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV)
         }),
-        autoExternal(),
+        format === 'umd' ? null : autoExternal(),
         minify
           ? uglify({
               compress: {
