@@ -6,6 +6,7 @@
   "module": "dist/react-router-hook.es.js",
   "main": "dist/react-router-hook.js",
   "umd:main": "dist/react-router-hook.umd.js",
+  "sideEffects": false,
   "scripts": {
     "clean": "rimraf dist",
     "build": "node build.js",
