@@ -1,4 +1,3 @@
-import uuid from 'uuid';
 import React from 'react';
 import hoistNonReactStatics from 'hoist-non-react-statics';
 import delve from 'dlv';
@@ -41,7 +40,11 @@ const routerHooks = (hooks, hookOpts) => {
   return Component => {
     const componentDisplayName = getDisplayName(Component);
     /* eslint no-param-reassign:0 */
-    hooks.id = hooks.id || `${componentDisplayName}_${uuid()}`;
+    hooks.id =
+      hooks.id ||
+      `${componentDisplayName}_${Math.random()
+        .toString(36)
+        .substr(2, 9)}`;
     Component[propName] = hooks;
     /* eslint no-param-reassign:1 */
 
