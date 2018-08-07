@@ -1,11 +1,4 @@
-import createReactContext from 'create-react-context';
+import React from 'react';
 
-const createNamedContext = (name, defaultValue) => {
-  const Ctx = createReactContext(defaultValue);
-  Ctx.Consumer.displayName = `${name}.Consumer`;
-  Ctx.Provider.displayName = `${name}.Provider`;
-  return Ctx;
-};
-
-const { Provider, Consumer } = createNamedContext('RouterHook');
+const { Provider, Consumer } = React.createContext();
 export { Provider as RouterHookProvider, Consumer as RouterHookConsumer };

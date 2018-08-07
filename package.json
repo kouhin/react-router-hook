@@ -72,12 +72,11 @@
     "rollup-plugin-uglify": "^4.0.0"
   },
   "dependencies": {
-    "create-react-context": "^0.2.2",
     "dlv": "^1.1.2",
     "hoist-non-react-statics": "^3.0.1",
     "unistore": "^3.0.6"
   },
   "peerDependencies": {
-    "react": "*"
+    "react": ">=16.3"
   }
 }
