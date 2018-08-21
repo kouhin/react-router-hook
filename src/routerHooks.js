@@ -13,9 +13,6 @@ const DEFAULT_HOOK_OPTIONS = {
   exposeReloadComponent: false
 };
 
-const contextProp = '@@hook_ctx';
-const forwardedRef = '@@hook_ref';
-
 function getDisplayName(Component) {
   return (
     Component.displayName ||
@@ -60,7 +57,7 @@ const routerHooks = (hooks, hookOpts) => {
       }
 
       componentDidMount() {
-        const { [contextProp]: context } = this.props;
+        const { context } = this.props;
         const { triggerConfig } = context;
         const { store } = triggerConfig;
         this.unsubscribe = store.subscribe(this.updateState);
@@ -68,8 +65,8 @@ const routerHooks = (hooks, hookOpts) => {
       }
 
       shouldComponentUpdate(nextProps, nextState) {
-        const { [contextProp]: context } = this.props;
-        const { [contextProp]: nextContext } = nextProps;
+        const { context } = this.props;
+        const { context: nextContext } = nextProps;
         const { loading } = this.state;
         if (!hookOptions.blockMode) return true;
         if (hookOptions.exposeLoading && loading !== nextState.loading) {
@@ -79,8 +76,8 @@ const routerHooks = (hooks, hookOpts) => {
       }
 
       componentDidUpdate(prevProps) {
-        const { [contextProp]: context } = this.props;
-        const { [contextProp]: prevContext } = prevProps;
+        const { context } = this.props;
+        const { context: prevContext } = prevProps;
         if (context.version !== prevContext.version) {
           setTimeout(this.reloadComponent);
         }
@@ -94,7 +91,7 @@ const routerHooks = (hooks, hookOpts) => {
       }
 
       updateState() {
-        const { [contextProp]: context } = this.props;
+        const { context } = this.props;
         const { triggerConfig } = context;
         const { store } = triggerConfig;
         const loading = delve(store.getState(), [hooks.id, 'loading'], false);
@@ -109,43 +106,39 @@ const routerHooks = (hooks, hookOpts) => {
       }
 
       reloadComponent() {
-        const { [contextProp]: context } = this.props;
+        const { context } = this.props;
         const { triggerConfig, version } = context;
         return triggerHooks(Component, triggerConfig, version);
       }
 
       render() {
-        const {
-          [contextProp]: context,
-          [forwardedRef]: ref,
-          ...restProps
-        } = this.props;
+        const { context, forwardedRef, ownProps } = this.props;
         const { triggerConfig } = context;
         const { store } = triggerConfig;
         const { loading } = this.state;
 
         const props = {
-          ...restProps,
+          ...ownProps,
           ...delve(store.getState(), [hooks.id, 'props'], {})
         };
         if (hookOptions.exposeLoading) props.loading = loading;
         if (hookOptions.exposeReloadComponent)
           props.reloadComponent = this.reloadComponent;
-        if (ref) props.ref = ref;
+        if (forwardedRef) props.ref = forwardedRef;
         return <Component {...props} />;
       }
     }
     RouterHookLoadable.displayName = `RouterHookLoadable(${componentDisplayName})`;
 
     const WithRouterHookConsumer = withForwardRef(hookOptions.withRef)(
-      (props, ref) => (
+      (ownProps, ref) => (
         <RouterHookConsumer>
           {context => {
             const passProps = {
-              ...props,
-              [contextProp]: context
+              ownProps,
+              context,
+              forwardedRef: ref
             };
-            if (ref) passProps[forwardedRef] = ref;
             return <RouterHookLoadable {...passProps} />;
           }}
         </RouterHookConsumer>
