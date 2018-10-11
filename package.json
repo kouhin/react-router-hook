@@ -1,6 +1,6 @@
 {
   "name": "react-router-hook",
-  "version": "2.0.0-beta.12",
+  "version": "2.0.0-beta.13",
   "description": "Universal data fetching and lifecycle management for react router with multiple components",
   "source": "src/index.js",
   "module": "dist/react-router-hook.es.js",
