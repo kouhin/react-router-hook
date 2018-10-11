@@ -1,4 +1,4 @@
-import delve from 'dlv';
+import get from 'dlv';
 
 import actions from './actions';
 import { mapActions } from './storeUtils';
@@ -29,11 +29,12 @@ export default function triggerHooks(component, triggerConfig, version, force) {
         ? props => boundActions.updateProps(componentHooks.id, props, version)
         : noop,
       getProps: componentHooks
-        ? () => delve(store.getState(), [componentHooks.id, 'props'])
+        ? () => get(store.getState(), [componentHooks.id, 'props'])
         : noop
     };
   };
 
+  boundActions.reset(version);
   const promises = components
     .map(Component => {
       const componentHooks = Component[propName];
@@ -41,17 +42,16 @@ export default function triggerHooks(component, triggerConfig, version, force) {
       const hookId = componentHooks.id;
       const runHookNames = hookNames.filter(key => componentHooks[key]);
       if (runHookNames.length < 1) return null;
-      boundActions.startLoading(hookId, version);
       return runHookNames
         .reduce(
           (total, name) =>
             total.then(() => {
               if (
                 !force &&
-                delve(store.getState(), [hookId, 'hooks', name]) === version
+                get(store.getState(), [hookId, 'hooks', name]) === version
               )
                 return null;
-              boundActions.startTriggerHook(hookId, name, version);
+              boundActions.startLoading(hookId, name, version);
               return componentHooks[name](getLocals(Component));
             }),
           Promise.resolve()
