@@ -1,6 +1,6 @@
 import React from 'react';
 import hoistNonReactStatics from 'hoist-non-react-statics';
-import delve from 'dlv';
+import get from 'dlv';
 
 import propName from './propName';
 import { RouterHookConsumer } from './context';
@@ -94,8 +94,8 @@ const routerHooks = (hooks, hookOpts) => {
         const { context } = this.props;
         const { triggerConfig } = context;
         const { store } = triggerConfig;
-        const loading = delve(store.getState(), [hooks.id, 'loading'], false);
-        const props = delve(store.getState(), [hooks.id, 'props'], null);
+        const loading = get(store.getState(), [hooks.id, 'loading'], false);
+        const props = get(store.getState(), [hooks.id, 'props'], null);
         const { loading: currentLoading, props: currentProps } = this.state;
         if (loading !== currentLoading || props !== currentProps) {
           this.setState({
@@ -119,7 +119,7 @@ const routerHooks = (hooks, hookOpts) => {
 
         const props = {
           ...ownProps,
-          ...delve(store.getState(), [hooks.id, 'props'], {})
+          ...get(store.getState(), [hooks.id, 'props'], {})
         };
         if (hookOptions.exposeLoading) props.loading = loading;
         if (hookOptions.exposeReloadComponent)
